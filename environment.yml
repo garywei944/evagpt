@@ -1,0 +1,127 @@
+# Typical conda environment for a reproducible machine learning project
+# Use `mamba env create -f environment.yml`
+# or `conda env create -f environment.yml` to install the environment
+# Created and maintained by garywei944(garywei944@gmail.com)
+
+name: evagpt
+channels:
+  - nvidia # for CUDA
+  - pytorch
+  - pyg # for pytorch-sparse
+  - huggingface
+  - conda-forge
+  - anaconda
+  - defaults
+dependencies:
+  - python>=3.10
+  - pip>=24.0
+  - cython
+
+  # System utils
+  - psutil
+  - nvtop
+
+  # essential functionality
+  - overrides
+  - python-dotenv
+  - ruamel.yaml
+  - absl-py
+  - tqdm
+  - attrs
+  - tabulate
+  - typing_extensions
+  - rich
+
+  # argparse
+  - omegaconf # for config, lightning dependency
+  - typed-argument-parser # for type hinting in argparse
+  - hydra-core # for config using CLI, lightning dependency
+  - hydra-submitit-launcher # for submitting jobs to slurm
+  - jsonargparse # required by lightning[extra]
+  - typeshed-client>=2.1.0 # for jsonargparse[signatures] required by lightning[extra]
+
+  # Frameworks
+  - numpy
+  - scipy
+  - pandas
+  - openpyxl # to open excel files
+  - pandarallel # for parallel computing panda dataframe
+  - einops
+  - sentencepiece
+  - bitsandbytes~=0.43.1 # with CUDA 11.8
+
+  # pytorch with specific CUDA version
+  - conda-forge::pytorch=2.3
+  - pytorch::pytorch-mutex=*=cuda # This line sets the mutex for CUDA-enabled PyTorch
+  - pytorch::pytorch-cuda=11.8
+  - conda-forge::cudatoolkit=11.8
+  - conda-forge::cudnn=8.9 # https://docs.nvidia.com/deeplearning/cudnn/support-matrix/index.html
+  - pytorch::torchvision=0.18
+  - conda-forge::flash-attn=2.5.8
+  - conda-forge::deepspeed=*=cuda*
+  - conda-forge::triton=2.0.0
+
+  # scikit-learn
+  - scikit-learn
+  - scikit-image
+
+  # PyTorch
+  - torchinfo
+  - pytorch-sparse~=0.6.18
+
+  # Huggingface
+  - conda-forge::transformers
+  - conda-forge::datasets
+  - conda-forge::accelerate
+  - conda-forge::evaluate
+  - conda-forge::tokenizers>=0.13.1 # https://stackoverflow.com/a/74386742
+  - conda-forge::peft
+
+  # Lightning
+  - conda-forge::lightning~=2.2.5
+  - conda-forge::lightning-bolts
+  - conda-forge::torchmetrics # lighting metrics
+
+  # utils
+  - bayesian-optimization
+  - singleton-decorator
+
+  # Visualization
+  - matplotlib
+  - seaborn
+  - moviepy # for generating gif
+
+  # Development
+  - jupyter
+  - wandb
+  - tensorboardx
+
+  # PyPI common practice
+  - click
+  - setuptools_scm
+  - twine # for uploading to pypi
+  - blackd # black daemon, for python formatting
+  - mypy # for type checking
+  - bump2version # for version bump
+  - watchdog # filesystem event
+  - flake8 # linter
+  - tox
+  - coverage
+  - sphinx # doc
+
+  # If you need to install pip packages, don't do `pip install xxx`
+  # Add the package here and run `mamba env update -f environment.yml --prune`
+  # for dependency completeness.
+  - pip:
+      - build
+      - datargs
+      # https://github.com/Lightning-AI/pytorch-lightning/blob/master/requirements/pytorch/extra.txt
+      # - lightning[pytorch-extra] # the requirements are already included in the file
+      # - lightning-gpt
+      - sourcery
+      - torchopt
+      - torch_optimizer
+      - separableconv-torch
+      - cd2root
+      # Trial
+      - omegaconf-argparse # to use omegaconf with argparse
