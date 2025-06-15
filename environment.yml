@@ -6,15 +6,12 @@
 name: evagpt
 channels:
   - nvidia # for CUDA
-  - pytorch
-  # - pyg # for pytorch-sparse
-  # - huggingface
   - conda-forge
   - anaconda
-  - defaults
+  - pytorch
 dependencies:
   - python>=3.12
-  - pip>=24.0
+  - pip
   - cython
   - pocl # for OpenCL
 
@@ -23,8 +20,8 @@ dependencies:
   - nvtop
 
   # Nvidia cuda drivers
-  - nvidia/label/cuda-12.9.0::cuda
-  - nvidia/label/cudnn-9.3.0::cudnn
+  - nvidia::cuda
+  - conda-forge::cudnn
   - conda-forge::nccl
 
   # essential functionality
@@ -53,9 +50,10 @@ dependencies:
   - einops
   - sentencepiece
   - bitsandbytes
+  - tiktoken
 
   # pytorch with specific CUDA version
-  - conda-forge::pytorch=*=*cuda*
+  - conda-forge::pytorch>=2.7.0=*cuda*
   - conda-forge::torchvision=*=*cuda*
   - pytorch::torchtriton
   - conda-forge::flash-attn
@@ -63,7 +61,6 @@ dependencies:
   - conda-forge::bitsandbytes=*=cuda*
   - conda-forge::pytorch_geometric
   - conda-forge::pytorch_sparse
-  - tiktoken
 
   # scikit-learn
   - scikit-learn
@@ -82,6 +79,13 @@ dependencies:
   # Lightning
   - conda-forge::lightning
   - conda-forge::torchmetrics # lighting metrics
+
+  # JAX
+  - conda-forge::jaxlib~=0.6.0=*cuda* # flax <- tensorstore <- libprotobuf breaks higher version?
+  - conda-forge::jax~=0.6.0
+  - conda-forge::flax
+  - conda-forge::equinox
+  - conda-forge::jaxtyping
 
   # utils
   - bayesian-optimization

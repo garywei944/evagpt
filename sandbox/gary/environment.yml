@@ -1,0 +1,57 @@
+# Typical conda environment for a reproducible machine learning project
+# Use `mamba env create -f environment.yml`
+# or `conda env create -f environment.yml` to install the environment
+# Created and maintained by garywei944(garywei944@gmail.com)
+
+name: evagpt-test2
+channels:
+  - nvidia # for CUDA
+  # - pyg # for pytorch-sparse
+  # - huggingface
+  - conda-forge
+  - anaconda
+  # - defaults
+dependencies:
+  - python
+  - pip
+
+  # System utils
+  # - psutil
+
+  # Nvidia cuda drivers
+  # - nvidia/label/cuda-12.9.1::cuda
+  # - nvidia/label/cudnn-9.10.2::cudnn
+  - nvidia::cuda
+  # - nvidia::cudnn
+  - conda-forge::cudnn
+  # - conda-forge::nccl
+  # - conda-forge::cudatoolkit=11.8.0
+
+  # pytorch
+  - conda-forge::pytorch=*=*cuda*
+  - conda-forge::torchvision=*=*cuda*
+  - pytorch::torchtriton
+  - conda-forge::flash-attn
+  - conda-forge::deepspeed=*=cuda*
+  - conda-forge::bitsandbytes=*=cuda*
+  - conda-forge::pytorch_geometric
+  - conda-forge::pytorch_sparse
+
+  # JAX
+  - conda-forge::jaxlib~=0.6.0=*cuda* # flax <- tensorstore <- libprotobuf breaks higher version?
+  - conda-forge::jax~=0.6.0
+  - conda-forge::flax
+  - conda-forge::equinox
+  - conda-forge::jaxtyping
+
+  # # Tensorflow
+  # - conda-forge::tensorflow-gpu
+  # - conda-forge::tf-keras # huggingface import tf_keras
+  # - conda-forge::tensorflow-datasets
+
+  # Huggingface
+  - conda-forge::transformers
+  - conda-forge::datasets
+  - conda-forge::accelerate
+  - conda-forge::evaluate
+  - conda-forge::peft
