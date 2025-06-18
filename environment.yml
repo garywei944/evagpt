@@ -20,8 +20,9 @@ dependencies:
   - nvtop
 
   # Nvidia cuda drivers
-  - nvidia::cuda
-  - conda-forge::cudnn
+  # - nvidia::cuda
+  - nvidia/label/cuda-12.9.1::cuda
+  - conda-forge::cudnn~=9.10.1
   - conda-forge::nccl
 
   # essential functionality
@@ -53,14 +54,14 @@ dependencies:
   - tiktoken
 
   # pytorch with specific CUDA version
-  - conda-forge::pytorch~=2.4.1=*cuda*
-  - conda-forge::torchvision=*=*cuda*
-  - pytorch::torchtriton
-  - conda-forge::flash-attn
-  - conda-forge::deepspeed=*=cuda*
-  - conda-forge::bitsandbytes=*=cuda*
-  - conda-forge::pytorch_geometric
-  - conda-forge::pytorch_sparse
+  - conda-forge::pytorch=2.4.1=*cuda*
+  - conda-forge::torchvision=0.19.1=*cuda*
+  - pytorch::torchtriton=3.1.0
+  - conda-forge::flash-attn=2.6.3
+  - conda-forge::deepspeed=0.15.3=cuda*
+  - conda-forge::bitsandbytes=0.46.0=cuda*
+  - conda-forge::pytorch_geometric=2.6.1
+  - conda-forge::pytorch_sparse=0.6.18
 
   # scikit-learn
   - scikit-learn
@@ -70,7 +71,7 @@ dependencies:
   - torchinfo
 
   # Huggingface
-  - conda-forge::transformers
+  - conda-forge::transformers>=4.52.4
   - conda-forge::datasets
   - conda-forge::accelerate
   - conda-forge::evaluate
@@ -81,15 +82,15 @@ dependencies:
   - conda-forge::torchmetrics # lighting metrics
 
   # JAX
-  - conda-forge::jaxlib~=0.4.31=*cuda* # flax <- tensorstore <- libprotobuf breaks higher version?
-  - conda-forge::jax~=0.4.31
+  - conda-forge::jaxlib=0.4.31=*cuda* # flax <- tensorstore <- libprotobuf breaks higher version?
+  - conda-forge::jax=0.4.31
   - conda-forge::flax
   - conda-forge::equinox
   - conda-forge::jaxtyping
 
   # Tensorflow
-  - conda-forge::tensorflow-gpu~=2.17.0
-  - conda-forge::tf-keras~=2.17.0 # huggingface import tf_keras
+  - conda-forge::tensorflow-gpu=2.17.0
+  - conda-forge::tf-keras=2.17.0 # huggingface import tf_keras
   - conda-forge::tensorflow-datasets
 
   # utils

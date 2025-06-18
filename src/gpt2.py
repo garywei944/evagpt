@@ -1,10 +1,12 @@
 from dataclasses import dataclass
 import jax.numpy as jnp
+import jax.random as jrandom
 from flax import linen as nn
-from flax.core.frozen_dict import freeze, unfreeze
+from flax.core.frozen_dict import freeze, unfreeze, FrozenDict
 from jaxtyping import Array, Float
 
 __all__ = ["GPT2Config", "MLP", "CausalSelfAttention", "Block", "GPT"]
+
 
 @dataclass
 class GPT2Config:
@@ -92,12 +94,14 @@ class GPT(nn.Module):
         self.ln_f = nn.LayerNorm()
         # self.lm_head = nn.Dense(self.config.vocab_size, use_bias=False)
 
-    def __call__(self, idx: Float[Array, "B T"]) -> Float[Array, "B T V"]:
-        B, T = idx.shape
+    def __call__(
+        self, input_ids: Float[Array, "B T"], *args, **kwargs
+    ) -> Float[Array, "B T V"]:
+        B, T = input_ids.shape
 
         assert T <= self.config.block_size, "Input sequence length exceeds block size"
 
-        tok_emb = self.wte(idx)
+        tok_emb = self.wte(input_ids)
         pos = jnp.arange(T)
         pos_emb = self.wpe(pos)
         x = tok_emb + pos_emb
@@ -146,3 +150,11 @@ class GPT(nn.Module):
             params[f"h_{i}"] = hf_blk
 
         return model, freeze({"params": params})
+
+    @classmethod
+    def from_config(
+        cls, config: GPT2Config, rng: jrandom.PRNGKey
+    ) -> tuple["GPT", FrozenDict]:
+        model = cls(config)
+        params = model.init(rng, jnp.ones((1, config.block_size), jnp.int32))
+        return model, freeze(params)

@@ -12,23 +12,23 @@ channels:
   - anaconda
   # - defaults
 dependencies:
-  - python
-  - pip
+  - python>=3.12
+  - pip>=25.1.1
 
   # System utils
   # - psutil
 
   # Nvidia cuda drivers
-  # - nvidia/label/cuda-12.9.1::cuda
+  - nvidia/label/cuda-12.9.1::cuda
   # - nvidia/label/cudnn-9.10.2::cudnn
-  - nvidia::cuda
+  # - nvidia::cuda
   # - nvidia::cudnn
-  - conda-forge::cudnn
+  - conda-forge::cudnn>=9.10.1
   # - conda-forge::nccl
   # - conda-forge::cudatoolkit=11.8.0
 
   # pytorch
-  - conda-forge::pytorch=*=*cuda*
+  - conda-forge::pytorch=2.4.1=*cuda*
   - conda-forge::torchvision=*=*cuda*
   - pytorch::torchtriton
   - conda-forge::flash-attn
@@ -38,15 +38,15 @@ dependencies:
   - conda-forge::pytorch_sparse
 
   # JAX
-  - conda-forge::jaxlib=*=*cuda* # flax <- tensorstore <- libprotobuf breaks higher version?
-  - conda-forge::jax
+  - conda-forge::jaxlib=0.4.31=*cuda* # flax <- tensorstore <- libprotobuf breaks higher version?
+  - conda-forge::jax=0.4.31
   - conda-forge::flax
   - conda-forge::equinox
   - conda-forge::jaxtyping
 
   # Tensorflow
-  - conda-forge::tensorflow-gpu
-  - conda-forge::tf-keras # huggingface import tf_keras
+  - conda-forge::tensorflow-gpu=2.17.0
+  - conda-forge::tf-keras=2.17.0 # huggingface import tf_keras
   - conda-forge::tensorflow-datasets
 
   # Huggingface
