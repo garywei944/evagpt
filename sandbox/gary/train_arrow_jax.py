@@ -7,7 +7,7 @@ A minimal demo of HuggingFace Datasets + Arrow + JAX pipeline.
 
 import argparse
 from datasets import load_dataset
-from transformers import GPT2TokenizerFast, default_data_collator
+from transformers import GPT2TokenizerFast
 import jax
 import jax.numpy as jnp
 import flax.jax_utils

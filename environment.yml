@@ -10,7 +10,7 @@ channels:
   - anaconda
   - pytorch
 dependencies:
-  - python>=3.12
+  - python=3.12
   - pip
   - cython
   - pocl # for OpenCL
@@ -53,7 +53,7 @@ dependencies:
   - tiktoken
 
   # pytorch with specific CUDA version
-  - conda-forge::pytorch>=2.7.0=*cuda*
+  - conda-forge::pytorch~=2.4.1=*cuda*
   - conda-forge::torchvision=*=*cuda*
   - pytorch::torchtriton
   - conda-forge::flash-attn
@@ -81,11 +81,16 @@ dependencies:
   - conda-forge::torchmetrics # lighting metrics
 
   # JAX
-  - conda-forge::jaxlib~=0.6.0=*cuda* # flax <- tensorstore <- libprotobuf breaks higher version?
-  - conda-forge::jax~=0.6.0
+  - conda-forge::jaxlib~=0.4.31=*cuda* # flax <- tensorstore <- libprotobuf breaks higher version?
+  - conda-forge::jax~=0.4.31
   - conda-forge::flax
   - conda-forge::equinox
   - conda-forge::jaxtyping
+
+  # Tensorflow
+  - conda-forge::tensorflow-gpu~=2.17.0
+  - conda-forge::tf-keras~=2.17.0 # huggingface import tf_keras
+  - conda-forge::tensorflow-datasets
 
   # utils
   - bayesian-optimization

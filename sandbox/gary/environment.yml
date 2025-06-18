@@ -3,7 +3,7 @@
 # or `conda env create -f environment.yml` to install the environment
 # Created and maintained by garywei944(garywei944@gmail.com)
 
-name: evagpt-test2
+name: evagpt-test
 channels:
   - nvidia # for CUDA
   # - pyg # for pytorch-sparse
@@ -38,16 +38,16 @@ dependencies:
   - conda-forge::pytorch_sparse
 
   # JAX
-  - conda-forge::jaxlib~=0.6.0=*cuda* # flax <- tensorstore <- libprotobuf breaks higher version?
-  - conda-forge::jax~=0.6.0
+  - conda-forge::jaxlib=*=*cuda* # flax <- tensorstore <- libprotobuf breaks higher version?
+  - conda-forge::jax
   - conda-forge::flax
   - conda-forge::equinox
   - conda-forge::jaxtyping
 
-  # # Tensorflow
-  # - conda-forge::tensorflow-gpu
-  # - conda-forge::tf-keras # huggingface import tf_keras
-  # - conda-forge::tensorflow-datasets
+  # Tensorflow
+  - conda-forge::tensorflow-gpu
+  - conda-forge::tf-keras # huggingface import tf_keras
+  - conda-forge::tensorflow-datasets
 
   # Huggingface
   - conda-forge::transformers

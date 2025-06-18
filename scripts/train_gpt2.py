@@ -12,31 +12,6 @@ import jax
 jax.config.update("jax_default_matmul_precision", "float32")
 # jax.config.update("jax_disable_jit", True)
 
-# Sanity check
-# if __name__ == "__main__":
-#     from flax.traverse_util import flatten_dict
-
-#     config = GPT2Config()
-
-#     key = jrandom.PRNGKey(0)
-#     # x = jrandom.normal(key, (32, 1024))
-#     x = jnp.arange(2 * config.block_size).reshape(2, -1)
-#     model, params = GPT.from_pretrained("gpt2")
-
-#     y = model.apply(params, x)
-#     print(y.shape)  # Should be (2, 256, 65) for the given config
-#     print(y)
-
-#     gt_model = FlaxAutoModelForCausalLM.from_pretrained("gpt2")
-#     gt_y = gt_model(x, params=gt_model.params).logits
-#     print(gt_y.shape)  # Should be (2, 256, 50257) for the given config
-#     print(gt_y)
-
-#     diff = jnp.abs(y - gt_y)
-#     print("max abs error:", float(jnp.max(diff)))
-#     print("max rel error:", float(jnp.max(diff / (jnp.abs(gt_y) + 1e-8))))
-
-# quick evaluation
 if __name__ == "__main__":
     num_return_sequences = 5
     max_length = 30
