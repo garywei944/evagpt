@@ -25,7 +25,7 @@ from flax import linen as nn
 import tiktoken
 from absl import logging
 
-from src.gpt2 import *
+from src.jax_gpt2 import *
 
 
 jax.config.update("jax_default_matmul_precision", "float32")

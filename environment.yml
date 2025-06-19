@@ -87,6 +87,7 @@ dependencies:
   - conda-forge::flax
   - conda-forge::equinox
   - conda-forge::jaxtyping
+  - conda-forge::beartype
 
   # Tensorflow
   - conda-forge::tensorflow-gpu=2.17.0

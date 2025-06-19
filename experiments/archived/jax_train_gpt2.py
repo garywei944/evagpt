@@ -34,7 +34,7 @@ import numpy as np
 from absl import logging
 from tqdm import tqdm
 
-from src.gpt2 import *
+from src.jax_gpt2 import *
 from experiments.data.language_modeling.get_dataset import get_datasets, data_loader
 
 
@@ -42,7 +42,7 @@ jax.config.update("jax_default_matmul_precision", "float32")
 jax.config.update("jax_disable_jit", True)
 
 # hyperparameters
-BATCH_SIZE = 2
+BATCH_SIZE = 16
 LEARNING_RATE = 3e-4
 WEIGHT_DECAY = 1e-2
 NUM_EPOCHS = 10

@@ -1,11 +1,12 @@
-from dataclasses import dataclass
-import jax.numpy as jnp
-import jax.random as jrandom
-from flax import linen as nn
-from flax.core.frozen_dict import freeze, unfreeze, FrozenDict
-from jaxtyping import Array, Float
+import torch
+from torch import nn
+import torch.nn.functional as F
 
-__all__ = ["GPT2Config", "MLP", "CausalSelfAttention", "Block", "GPT"]
+from dataclasses import dataclass
+import math
+
+
+__all__ = ["GPT2Config", "MLP", "CausalSelfAttention", "Block", "GPT2"]
 
 
 @dataclass
@@ -15,146 +16,146 @@ class GPT2Config:
     n_layer: int = 12
     n_head: int = 12
     n_embd: int = 768
+    dropout: float = 0.1
+    bias: bool = True
 
 
 class MLP(nn.Module):
-    config: GPT2Config
+    def __init__(self, config: GPT2Config):
+        super().__init__()
+        self.c_fc = nn.Linear(config.n_embd, config.n_embd * 4, bias=config.bias)
+        self.c_proj = nn.Linear(config.n_embd * 4, config.n_embd, bias=config.bias)
+        self.dropout = nn.Dropout(config.dropout)
 
-    def setup(self):
-        self.c_fc = nn.Dense(self.config.n_embd * 4)
-        self.c_proj = nn.Dense(self.config.n_embd)
-
-    def __call__(self, x: Float[Array, "B T C"]) -> Float[Array, "B T C"]:
+    def forward(self, x):
         x = self.c_fc(x)
-        x = nn.gelu(x)
+        x = F.gelu(x)
         x = self.c_proj(x)
+        x = self.dropout(x)
+
         return x
 
 
 class CausalSelfAttention(nn.Module):
-    config: GPT2Config
+    def __init__(self, config: GPT2Config):
+        super().__init__()
+        assert config.n_embd % config.n_head == 0
 
-    def setup(self):
-        assert self.config.n_embd % self.config.n_head == 0
+        self.n_head = config.n_head
+        self.n_embd = config.n_embd
+        self.dropout = config.dropout
 
-        self.n_head = self.config.n_head
-        self.n_embd = self.config.n_embd
+        self.c_attn = nn.Linear(self.n_embd, self.n_embd * 3, bias=config.bias)
+        self.c_proj = nn.Linear(self.n_embd, self.n_embd, bias=config.bias)
+        # self.attn_dropout = nn.Dropout(self.dropout)
+        self.resid_dropout = nn.Dropout(self.dropout)
 
-        # q, k, v for all heads
-        self.c_attn = nn.Dense(self.n_embd * 3)
-        # output projection
-        self.c_proj = nn.Dense(self.n_embd)
+        # self.causal_mask = ~torch.tril(
+        #     torch.ones(self.config.block_size, self.config.block_size)
+        # ).bool()
 
-        self.causal_mask = ~jnp.tril(
-            jnp.ones((self.config.block_size, self.config.block_size), dtype=jnp.bool)
-        )
-
-    def __call__(self, x: Float[Array, "B T C"]) -> Float[Array, "B T C"]:
+    def forward(self, x):
         B, T, C = x.shape
-        hs = C // self.n_head
+        nh, hs = self.n_head, C // self.n_head
 
-        qkv = self.c_attn(x)
-        q, k, v = jnp.split(qkv, 3, axis=-1)
-        q = q.reshape(B, T, self.n_head, hs)  # (B, T, nh, hs)
-        k = k.reshape(B, T, self.n_head, hs)  # (B, T, nh, hs)
-        v = v.reshape(B, T, self.n_head, hs)  # (B, T, nh, hs)
+        q, k, v = self.c_attn(x).chunk(3, dim=-1)
+        q = q.view(B, T, nh, hs).transpose(1, 2)  # (B, nh, T, hs)
+        k = k.view(B, T, nh, hs).transpose(1, 2)  # (B, nh, T, hs)
+        v = v.view(B, T, nh, hs).transpose(1, 2)  # (B, nh, T, hs)
+        y = F.scaled_dot_product_attention(
+            q, k, v, dropout_p=self.dropout if self.training else 0, is_causal=True
+        )  # (B, nh, T, hs)
+        y = y.transpose(1, 2).reshape(B, T, C)
 
-        att = jnp.einsum("bihc,bjhc->bhij", q, k) / jnp.sqrt(hs)
-        att = jnp.where(self.causal_mask[:T, :T], -jnp.inf, att)
-        att = nn.softmax(att, axis=-1)
-        y = jnp.einsum("bhij,bjhc->bihc", att, v).reshape(B, T, C)
-        y = self.c_proj(y)
-
-        return y
+        return self.resid_dropout(self.c_proj(y))
 
 
 class Block(nn.Module):
-    config: GPT2Config
+    def __init__(self, config: GPT2Config):
+        super().__init__()
+        self.ln1 = nn.LayerNorm(config.n_embd, bias=config.bias)
+        self.attn = CausalSelfAttention(config)
+        self.ln2 = nn.LayerNorm(config.n_embd, bias=config.bias)
+        self.mlp = MLP(config)
 
-    def setup(self):
-        self.ln_1 = nn.LayerNorm()
-        self.attn = CausalSelfAttention(self.config)
-        self.ln_2 = nn.LayerNorm()
-        self.mlp = MLP(self.config)
-
-    def __call__(self, x: Float[Array, "B T C"]) -> Float[Array, "B T C"]:
-        x += self.attn(self.ln_1(x))
-        x += self.mlp(self.ln_2(x))
+    def forward(self, x):
+        x = x + self.attn(self.ln1(x))
+        x = x + self.mlp(self.ln2(x))
         return x
 
 
-class GPT(nn.Module):
-    config: GPT2Config
+class GPT2(nn.Module):
+    def __init__(self, config: GPT2Config):
+        super().__init__()
+        self.config = config
+        self.transformer = nn.ModuleDict(
+            dict(
+                wte=nn.Embedding(config.vocab_size, config.n_embd),
+                wpe=nn.Embedding(config.block_size, config.n_embd),
+                drop=nn.Dropout(config.dropout),
+                h=nn.ModuleList([Block(config) for _ in range(config.n_layer)]),
+                ln_f=nn.LayerNorm(config.n_embd, bias=config.bias),
+            )
+        )
 
-    def setup(self):
-        self.wte = nn.Embed(self.config.vocab_size, self.config.n_embd)
-        self.wpe = nn.Embed(self.config.block_size, self.config.n_embd)
+        # initialization
+        self.apply(self._init_weights)
 
-        self.h = [Block(self.config) for _ in range(self.config.n_layer)]
-        self.ln_f = nn.LayerNorm()
-        # self.lm_head = nn.Dense(self.config.vocab_size, use_bias=False)
+    def _init_weights(self, module):
+        if isinstance(module, nn.Linear):
+            if module._get_name() == "c_proj":
+                nn.init.normal_(
+                    module.weight,
+                    mean=0.0,
+                    std=0.02 / math.sqrt(2 * self.config.n_layer),
+                )
+            else:
+                nn.init.normal_(module.weight, mean=0.0, std=0.02)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias)
+        elif isinstance(module, nn.Embedding):
+            torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
 
-    def __call__(
-        self, input_ids: Float[Array, "B T"], *args, **kwargs
-    ) -> Float[Array, "B T V"]:
+    def forward(
+        self, input_ids, attention_mask=None, labels=None
+    ) -> tuple[torch.Tensor, torch.Tensor | None]:
         B, T = input_ids.shape
+        device = input_ids.device
 
-        assert T <= self.config.block_size, "Input sequence length exceeds block size"
-
-        tok_emb = self.wte(input_ids)
-        pos = jnp.arange(T)
-        pos_emb = self.wpe(pos)
-        x = tok_emb + pos_emb
-
-        for block in self.h:
+        tok_emb = self.transformer.wte(input_ids)
+        pos_emb = self.transformer.wpe(torch.arange(T, dtype=torch.long, device=device))
+        x = self.transformer.drop(tok_emb + pos_emb)
+        for block in self.transformer.h:
             x = block(x)
-        x = self.ln_f(x)
-        # logits = self.lm_head(x)
+        x = self.transformer.ln_f(x)
 
-        # implement lm_head from self.wte embeddings
-        logits = jnp.einsum("btc,vc->btv", x, self.wte.embedding)
+        if labels is not None:
+            x = x @ self.transformer.wte.weight.T
+            shift_logits = x[..., :-1, :]
+            shift_labels = labels[..., 1:]
+            loss = F.cross_entropy(
+                shift_logits.reshape(-1, shift_logits.size(-1)),
+                shift_labels.reshape(-1),
+            )
+            return x, loss
+        x = F.linear(x[:, [-1], :], self.transformer.wte.weight)
+        return x, None
 
-        return logits
 
-    @classmethod
-    def from_pretrained(cls, model_type: str):
-        assert model_type in ["gpt2", "gpt2-medium", "gpt2-large", "gpt2-xl"]
-
-        config_args = {
-            "gpt2": dict(n_layer=12, n_head=12, n_embd=768),  # 124M params
-            "gpt2-medium": dict(n_layer=24, n_head=16, n_embd=1024),  # 350M params
-            "gpt2-large": dict(n_layer=36, n_head=20, n_embd=1280),  # 774M params
-            "gpt2-xl": dict(n_layer=48, n_head=25, n_embd=1600),  # 1558M params
-        }[model_type]
-        config = GPT2Config(**config_args)
-        model = cls(config)
-
-        # 2. load pretrained weights from Hugging Face
-        from transformers import FlaxAutoModelForCausalLM
-
-        hf_model = FlaxAutoModelForCausalLM.from_pretrained(model_type)
-
-        hf_params = unfreeze(hf_model.params)
-        params = {}
-
-        # embeddings + final LN
-        params["wte"] = hf_params["transformer"]["wte"]
-        params["wpe"] = hf_params["transformer"]["wpe"]
-        params["ln_f"] = hf_params["transformer"]["ln_f"]
-
-        for i, hf_blk in hf_params["transformer"]["h"].items():
-            hf_blk["attn"]["c_attn"]["kernel"] = hf_blk["attn"]["c_attn"]["kernel"].T
-            hf_blk["attn"]["c_proj"]["kernel"] = hf_blk["attn"]["c_proj"]["kernel"].T
-            hf_blk["mlp"]["c_fc"]["kernel"] = hf_blk["mlp"]["c_fc"]["kernel"].T
-            hf_blk["mlp"]["c_proj"]["kernel"] = hf_blk["mlp"]["c_proj"]["kernel"].T
-            params[f"h_{i}"] = hf_blk
-
-        return model, freeze({"params": params})
-
-    @classmethod
-    def from_config(
-        cls, config: GPT2Config, rng: jrandom.PRNGKey
-    ) -> tuple["GPT", FrozenDict]:
-        model = cls(config)
-        params = model.init(rng, jnp.ones((1, config.block_size), jnp.int32))
-        return model, freeze(params)
+if __name__ == "__main__":
+    config = GPT2Config(
+        block_size=1024,
+        vocab_size=50257,  # GPT-2 vocab size
+        n_layer=12,
+        n_head=12,
+        n_embd=768,
+        dropout=0.1,
+        bias=True,
+    )
+    model = GPT2(config)
+    input_ids = torch.randint(
+        0, config.vocab_size, (2, 1024)
+    )  # Batch size of 2, sequence length of 20
+    logits, loss = model(input_ids, labels=input_ids)
+    print(logits.shape, loss)
+    print(loss)
