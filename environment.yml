@@ -10,7 +10,7 @@ channels:
   - anaconda
   - pytorch
 dependencies:
-  - python=3.12
+  - python>=3.10
   - pip
   - cython
   - pocl # for OpenCL
@@ -21,8 +21,9 @@ dependencies:
 
   # Nvidia cuda drivers
   # - nvidia::cuda
-  - nvidia/label/cuda-12.9.1::cuda
-  - conda-forge::cudnn~=9.10.1
+  # - nvidia/label/cuda-12.9.1::cuda
+  - nvidia/label/cuda-12.2.2::cuda
+  - conda-forge::cudnn
   - conda-forge::nccl
 
   # essential functionality
@@ -54,7 +55,7 @@ dependencies:
   - tiktoken
 
   # pytorch with specific CUDA version
-  - conda-forge::pytorch~=2.7.0=*cuda*
+  - conda-forge::pytorch=*=*cuda*
   - conda-forge::torchvision=*=*cuda*
   - pytorch::torchtriton
   - conda-forge::flash-attn
@@ -71,7 +72,7 @@ dependencies:
   - torchinfo
 
   # Huggingface
-  - conda-forge::transformers>=4.52.4
+  - conda-forge::transformers
   - conda-forge::datasets
   - conda-forge::accelerate
   - conda-forge::evaluate

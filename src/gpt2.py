@@ -128,7 +128,8 @@ class GPT2(nn.Module):
             x = block(x)
         x = self.transformer.ln_f(x)
 
-        x = x @ self.transformer.wte.weight.T
+        # x = x @ self.transformer.wte.weight.T
+        x = F.linear(x, self.transformer.wte.weight, bias=None)
         if labels is not None:
             shift_logits = x[..., :-1, :]
             shift_labels = labels[..., 1:]
@@ -161,3 +162,4 @@ if __name__ == "__main__":
     for name, param in model.named_parameters():
         if param.requires_grad:
             print(f"{name}: {param.shape}")
+from transformers import GPT2LMHeadModel

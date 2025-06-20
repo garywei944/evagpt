@@ -5,22 +5,24 @@ from lightning.pytorch.callbacks import (
     LearningRateMonitor,
     Timer,
     ModelCheckpoint,
-    RichProgressBar,
-    RichModelSummary,
+    ModelSummary,
 )
+from lightning.pytorch.utilities import rank_zero_info
 from torchmetrics.text import Perplexity
 
 from transformers.optimization import get_scheduler
 
 import torch
 import torch.nn.functional as F
-import torchinfo
 
-from absl import logging
+from datetime import datetime
+from pathlib import Path
 import regex as re
 
 from experiments.data.language_modeling.wikitext_datamodule import WikiTextDataModule
 from src.gpt2 import GPT2Config, GPT2
+
+torch.set_float32_matmul_precision("medium")
 
 
 class GPT2Module(L.LightningModule):
@@ -38,12 +40,6 @@ class GPT2Module(L.LightningModule):
         config = GPT2Config()
         self.model = GPT2(config)
         self.metrics = Perplexity()
-
-    def on_fit_start(self):
-        # print model summary
-        example_inputs = next(iter(self.dm.train_dataloader()))
-        example_inputs = {k: v.to(self.device) for k, v in example_inputs.items()}
-        torchinfo.summary(self.model, input_data=example_inputs)
 
     def setup(self, stage: str):
         if stage == "fit":
@@ -142,6 +138,7 @@ def loss_fn(logits, labels):
 
 def parse_args():
     parser = LightningArgumentParser()
+    parser.add_argument("--run_ver", type=str, default="gpt2")
     parser.add_argument("-s", "--seed", type=int, default=42)
     parser.add_argument(
         "-e",
@@ -160,13 +157,16 @@ def parse_args():
         type=str,
         default="eva_gpt",
     )
+    parser.add_argument("--accumulate_grad_batches", type=int, default=1)
     parser.add_argument("--gradient_clip_val", type=float, default=1.0)
+    parser.add_argument("--strategy", type=str, default="deepspeed_stage_2")
+    parser.add_argument("--precision", type=str, default="16-mixed")
 
     parser.add_lightning_class_args(GPT2Module, "model")
     parser.add_lightning_class_args(WikiTextDataModule, "data")
 
     args = parser.parse_args()
-    logging.info(f"NUM EPOCHS: {args.epochs}")
+    rank_zero_info(f"{args.epochs=}")
 
     del args.model.dm
 
@@ -174,8 +174,10 @@ def parse_args():
 
 
 if __name__ == "__main__":
+    timestamp = datetime.now().isoformat()
     args = parse_args()
-    model_name = "gpt2"
+    model_name = args.run_ver
+    log_dir = Path("logs") / "gpt2" / model_name
 
     L.seed_everything(args.seed)
 
@@ -191,9 +193,9 @@ if __name__ == "__main__":
                 name=model_name,
                 entity="garywei944",
             ),
-            TensorBoardLogger(save_dir="logs", name=model_name),
+            TensorBoardLogger(save_dir=log_dir / "tensorboard", name=model_name),
             CSVLogger(
-                save_dir="logs",
+                save_dir=log_dir / "csv",
                 name=model_name,
             ),
         ],
@@ -207,16 +209,21 @@ if __name__ == "__main__":
                 mode="min",
                 save_top_k=1,
             ),
-            RichProgressBar(),
-            RichModelSummary(max_depth=1),
+            ModelSummary(max_depth=-1),
         ],
+        accumulate_grad_batches=args.accumulate_grad_batches,
         gradient_clip_val=args.gradient_clip_val,
         gradient_clip_algorithm="norm",
+        # enable_progress_bar=False,
         # limit_train_batches=0.01,  # 1% of the training data, for debugging
         # limit_train_batches=15,  # 5 batches of the training data, for debugging
         # limit_val_batches=15,
         # limit_test_batches=15,
-        fast_dev_run=True,
+        # fast_dev_run=True,
+        accelerator="gpu",
+        devices="auto",
+        strategy=args.strategy,
+        precision=args.precision,
     )
 
     # # Sanity check: gpt2-large perplexity on wikitext-2 test = 18.5486

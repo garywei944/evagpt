@@ -16,7 +16,6 @@ os.environ["NCCL_IB_HCA"] = "=mlx5_0,mlx5_1,mlx5_2,mlx5_3"
 os.environ["NCCL_SOCKET_IFNAME"] = "=eth0,eth1,eth2,eth3"
 os.environ["NCCL_ALGO"] = "Tree"
 os.environ["NCCL_P2P_DISABLE"] = "0"
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"  # Use only the first GPU
 
 # jax
 import jax

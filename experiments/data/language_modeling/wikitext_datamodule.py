@@ -15,10 +15,10 @@ def collate_fn(examples: list[dict[str, list[int]]]) -> dict[str, torch.Tensor]:
 class WikiTextDataModule(L.LightningDataModule):
     tokenizer_name: str = "openai-community/gpt2"
     dataset_path: str = "wikitext"
-    dataset_name: str = "wikitext-2-raw-v1"
+    dataset_name: str = "wikitext-103-v1"
     train_batch_size_per_device: int = 8
     eval_batch_size_per_device: int = 8
-    block_size: int = 512
+    block_size: int = 1024
 
     def __post_init__(self):
         super().__init__()
@@ -30,7 +30,7 @@ class WikiTextDataModule(L.LightningDataModule):
         tokenizer = AutoTokenizer.from_pretrained(self.tokenizer_name)
         datasets = get_datasets(
             tokenizer, self.dataset_path, self.dataset_name, self.block_size
-        )
+        ).remove_columns("attention_mask")
 
     def setup(self, stage: str):
         self.tokenizer = AutoTokenizer.from_pretrained(self.tokenizer_name)
