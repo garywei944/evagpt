@@ -100,17 +100,16 @@ class GPT2(nn.Module):
 
         # initialization
         self.apply(self._init_weights)
+        # apply special scaled init to the residual projections, per GPT-2 paper
+        for pn, p in self.named_parameters():
+            if pn.endswith("c_proj.weight"):
+                torch.nn.init.normal_(
+                    p, mean=0.0, std=0.02 / math.sqrt(2 * config.n_layer)
+                )
 
     def _init_weights(self, module):
         if isinstance(module, nn.Linear):
-            if module._get_name() == "c_proj":
-                nn.init.normal_(
-                    module.weight,
-                    mean=0.0,
-                    std=0.02 / math.sqrt(2 * self.config.n_layer),
-                )
-            else:
-                nn.init.normal_(module.weight, mean=0.0, std=0.02)
+            nn.init.normal_(module.weight, mean=0.0, std=0.02)
             if module.bias is not None:
                 nn.init.zeros_(module.bias)
         elif isinstance(module, nn.Embedding):
@@ -129,8 +128,8 @@ class GPT2(nn.Module):
             x = block(x)
         x = self.transformer.ln_f(x)
 
+        x = x @ self.transformer.wte.weight.T
         if labels is not None:
-            x = x @ self.transformer.wte.weight.T
             shift_logits = x[..., :-1, :]
             shift_labels = labels[..., 1:]
             loss = F.cross_entropy(
@@ -138,7 +137,6 @@ class GPT2(nn.Module):
                 shift_labels.reshape(-1),
             )
             return x, loss
-        x = F.linear(x[:, [-1], :], self.transformer.wte.weight)
         return x, None
 
 
@@ -159,3 +157,7 @@ if __name__ == "__main__":
     logits, loss = model(input_ids, labels=input_ids)
     print(logits.shape, loss)
     print(loss)
+
+    for name, param in model.named_parameters():
+        if param.requires_grad:
+            print(f"{name}: {param.shape}")

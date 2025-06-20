@@ -1,0 +1,234 @@
+import lightning as L
+from lightning.pytorch.cli import LightningArgumentParser
+from lightning.pytorch.loggers import TensorBoardLogger, WandbLogger, CSVLogger
+from lightning.pytorch.callbacks import (
+    LearningRateMonitor,
+    Timer,
+    ModelCheckpoint,
+    RichProgressBar,
+    RichModelSummary,
+)
+from torchmetrics.text import Perplexity
+
+from transformers.optimization import get_scheduler
+
+import torch
+import torch.nn.functional as F
+import torchinfo
+
+from absl import logging
+import regex as re
+
+from experiments.data.language_modeling.wikitext_datamodule import WikiTextDataModule
+from src.gpt2 import GPT2Config, GPT2
+
+
+class GPT2Module(L.LightningModule):
+    def __init__(
+        self,
+        dm: WikiTextDataModule = None,  # type: ignore
+        learning_rate: float = 2.5e-4,
+        weight_decay: float = 0.1,
+    ):
+        super().__init__()
+
+        self.save_hyperparameters(ignore=["dm"])
+        self.dm = dm
+
+        config = GPT2Config()
+        self.model = GPT2(config)
+        self.metrics = Perplexity()
+
+    def on_fit_start(self):
+        # print model summary
+        example_inputs = next(iter(self.dm.train_dataloader()))
+        example_inputs = {k: v.to(self.device) for k, v in example_inputs.items()}
+        torchinfo.summary(self.model, input_data=example_inputs)
+
+    def setup(self, stage: str):
+        if stage == "fit":
+            total_devices = self.trainer.num_devices * self.trainer.num_nodes
+            train_batches = len(self.dm.train_dataloader()) // total_devices
+            self.train_steps = train_batches * self.trainer.max_epochs
+
+    def forward(self, batch):
+        return self.model(**batch)
+
+    def training_step(self, batch, batch_idx):
+        _, loss = self(batch)
+        self.log("train/loss", loss, on_step=True, on_epoch=True, sync_dist=True)
+        return loss
+
+    def validation_step(self, batch, batch_idx):
+        labels = batch.pop("labels")
+        logits, _ = self(batch)
+        loss, shift_logits, shift_labels = loss_fn(logits, labels)
+        self.log("val/loss", loss, on_step=False, on_epoch=True, sync_dist=True)
+
+        self.metrics(shift_logits, shift_labels)
+        self.log(
+            "val/perplexity", self.metrics, on_step=False, on_epoch=True, sync_dist=True
+        )
+        return loss
+
+    def test_step(self, batch, batch_idx):
+        labels = batch.pop("labels")
+        logits, _ = self(batch)
+        loss, shift_logits, shift_labels = loss_fn(logits, labels)
+        self.log("test/loss", loss, on_step=False, on_epoch=True, sync_dist=True)
+
+        self.metrics(shift_logits, shift_labels)
+        self.log(
+            "test/perplexity",
+            self.metrics,
+            on_step=False,
+            on_epoch=True,
+            sync_dist=True,
+        )
+        return loss
+
+    def configure_optimizers(self):
+        # no_decay = ["bias", "LayerNorm.weight"]
+        pattern = r"^(.*\.)?(bias|ln(\d|_f)\.weight)$"
+
+        optimizer_grouped_parameters = [
+            {
+                "params": [
+                    p
+                    for n, p in self.model.named_parameters()
+                    if not re.match(pattern, n)
+                ],
+                "weight_decay": self.hparams.weight_decay,
+            },
+            {
+                "params": [
+                    p for n, p in self.model.named_parameters() if re.match(pattern, n)
+                ],
+                "weight_decay": 0.0,
+            },
+        ]
+        optimizer = torch.optim.AdamW(
+            optimizer_grouped_parameters,
+            lr=self.hparams.learning_rate,
+            betas=(0.9, 0.95),  # consist with deepseek V3
+            eps=1e-6,
+        )
+        scheduler = get_scheduler(
+            "cosine",
+            optimizer=optimizer,
+            num_warmup_steps=int(self.train_steps * 0.02),
+            num_training_steps=self.train_steps,
+        )
+        return {
+            "optimizer": optimizer,
+            "lr_scheduler": {
+                "scheduler": scheduler,
+                "interval": "step",
+                "frequency": 1,
+            },
+        }
+
+
+def loss_fn(logits, labels):
+    shift_logits = logits[..., :-1, :]
+    shift_labels = labels[..., 1:]
+
+    ce_loss = F.cross_entropy(
+        shift_logits.reshape(-1, shift_logits.size(-1)), shift_labels.reshape(-1)
+    )
+
+    return ce_loss, shift_logits, shift_labels
+
+
+def parse_args():
+    parser = LightningArgumentParser()
+    parser.add_argument("-s", "--seed", type=int, default=42)
+    parser.add_argument(
+        "-e",
+        "--epochs",
+        type=int,
+        default=10,
+    )
+    parser.add_argument(
+        "--ckpt",
+        type=str,
+        default=None,
+    )
+    parser.add_argument(
+        "-wp",
+        "--wandb_project",
+        type=str,
+        default="eva_gpt",
+    )
+    parser.add_argument("--gradient_clip_val", type=float, default=1.0)
+
+    parser.add_lightning_class_args(GPT2Module, "model")
+    parser.add_lightning_class_args(WikiTextDataModule, "data")
+
+    args = parser.parse_args()
+    logging.info(f"NUM EPOCHS: {args.epochs}")
+
+    del args.model.dm
+
+    return args
+
+
+if __name__ == "__main__":
+    args = parse_args()
+    model_name = "gpt2"
+
+    L.seed_everything(args.seed)
+
+    dm = WikiTextDataModule(**args.data)
+    model = GPT2Module(dm=dm, **args.model)
+
+    timer = Timer()
+    trainer = L.Trainer(
+        max_epochs=args.epochs,
+        logger=[
+            WandbLogger(
+                project=args.wandb_project,
+                name=model_name,
+                entity="garywei944",
+            ),
+            TensorBoardLogger(save_dir="logs", name=model_name),
+            CSVLogger(
+                save_dir="logs",
+                name=model_name,
+            ),
+        ],
+        callbacks=[
+            LearningRateMonitor(logging_interval="step"),
+            timer,
+            ModelCheckpoint(
+                dirpath=f"checkpoints/{model_name}",
+                filename=f"{model_name}-{{epoch:02d}}-{{val/perplexity:.2f}}",
+                monitor="val/perplexity",
+                mode="min",
+                save_top_k=1,
+            ),
+            RichProgressBar(),
+            RichModelSummary(max_depth=1),
+        ],
+        gradient_clip_val=args.gradient_clip_val,
+        gradient_clip_algorithm="norm",
+        # limit_train_batches=0.01,  # 1% of the training data, for debugging
+        # limit_train_batches=15,  # 5 batches of the training data, for debugging
+        # limit_val_batches=15,
+        # limit_test_batches=15,
+        fast_dev_run=True,
+    )
+
+    # # Sanity check: gpt2-large perplexity on wikitext-2 test = 18.5486
+    # trainer.test(model, datamodule=dm)
+
+    # trainer.validate(model, datamodule=dm)
+
+    trainer.fit(model, datamodule=dm)
+    # print(timer.time_elapsed("train"))
+
+    # try to load the best model
+    # model = GPT2ModelStructDense.load_from_checkpoint(
+    #     trainer.checkpoint_callback.best_model_path
+    # )
+    trainer.test(model, datamodule=dm)
