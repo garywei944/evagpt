@@ -8,6 +8,13 @@ import math
 
 __all__ = ["GPT2Config", "MLP", "CausalSelfAttention", "Block", "GPT2"]
 
+CONFIG_ARGS = {
+    "gpt2": dict(n_layer=12, n_head=12, n_embd=768),  # 124M params
+    "gpt2-medium": dict(n_layer=24, n_head=16, n_embd=1024),  # 350M params
+    "gpt2-large": dict(n_layer=36, n_head=20, n_embd=1280),  # 774M params
+    "gpt2-xl": dict(n_layer=48, n_head=25, n_embd=1600),  # 1558M params
+}
+
 
 @dataclass
 class GPT2Config:
@@ -18,6 +25,12 @@ class GPT2Config:
     n_embd: int = 768
     dropout: float = 0.1
     bias: bool = True
+
+    @classmethod
+    def from_pretrained(cls, model_name: str):
+        assert model_name in CONFIG_ARGS, f"Unknown model name: {model_name}"
+        config = CONFIG_ARGS[model_name]
+        return cls(**config)
 
 
 class MLP(nn.Module):
@@ -162,4 +175,3 @@ if __name__ == "__main__":
     for name, param in model.named_parameters():
         if param.requires_grad:
             print(f"{name}: {param.shape}")
-from transformers import GPT2LMHeadModel

@@ -17,7 +17,9 @@ import torch.nn.functional as F
 
 from datetime import datetime
 from pathlib import Path
+from dataclasses import asdict
 import regex as re
+import os
 
 from experiments.data.language_modeling.wikitext_datamodule import WikiTextDataModule
 from src.gpt2 import GPT2Config, GPT2
@@ -29,15 +31,18 @@ class GPT2Module(L.LightningModule):
     def __init__(
         self,
         dm: WikiTextDataModule = None,  # type: ignore
+        model_name: str = "gpt2",
         learning_rate: float = 2.5e-4,
         weight_decay: float = 0.1,
     ):
         super().__init__()
 
+        config = GPT2Config.from_pretrained(model_name)
+
+        self.hparams.update(asdict(config))
         self.save_hyperparameters(ignore=["dm"])
         self.dm = dm
 
-        config = GPT2Config()
         self.model = GPT2(config)
         self.metrics = Perplexity()
 
@@ -45,7 +50,10 @@ class GPT2Module(L.LightningModule):
         if stage == "fit":
             total_devices = self.trainer.num_devices * self.trainer.num_nodes
             train_batches = len(self.dm.train_dataloader()) // total_devices
-            self.train_steps = train_batches * self.trainer.max_epochs
+            if self.trainer.max_epochs is None:
+                self.train_steps = self.trainer.max_steps
+            else:
+                self.train_steps = train_batches * self.trainer.max_epochs
 
     def forward(self, batch):
         return self.model(**batch)
@@ -155,7 +163,7 @@ def parse_args():
         "-wp",
         "--wandb_project",
         type=str,
-        default="eva_gpt",
+        default="gpt2",
     )
     parser.add_argument("--accumulate_grad_batches", type=int, default=1)
     parser.add_argument("--gradient_clip_val", type=float, default=1.0)
@@ -176,10 +184,10 @@ def parse_args():
 if __name__ == "__main__":
     timestamp = datetime.now().isoformat()
     args = parse_args()
-    model_name = args.run_ver
-    log_dir = Path("logs") / "gpt2" / model_name
+    run_name = args.run_ver
+    log_dir = Path("logs") / "gpt2" / run_name
 
-    L.seed_everything(args.seed)
+    L.seed_everything(args.seed + int(os.getenv("LOCAL_RANK", "0")))
 
     dm = WikiTextDataModule(**args.data)
     model = GPT2Module(dm=dm, **args.model)
@@ -190,21 +198,21 @@ if __name__ == "__main__":
         logger=[
             WandbLogger(
                 project=args.wandb_project,
-                name=model_name,
-                entity="garywei944",
+                name=run_name,
+                entity="danaus",
             ),
-            TensorBoardLogger(save_dir=log_dir / "tensorboard", name=model_name),
+            # TensorBoardLogger(save_dir=log_dir / "tensorboard", name=model_name),
             CSVLogger(
                 save_dir=log_dir / "csv",
-                name=model_name,
+                name=run_name,
             ),
         ],
         callbacks=[
             LearningRateMonitor(logging_interval="step"),
             timer,
             ModelCheckpoint(
-                dirpath=f"checkpoints/{model_name}",
-                filename=f"{model_name}-{{epoch:02d}}-{{val/perplexity:.2f}}",
+                dirpath=f"checkpoints/{run_name}",
+                filename=f"{run_name}-{{epoch:02d}}-{{val/perplexity:.2f}}",
                 monitor="val/perplexity",
                 mode="min",
                 save_top_k=1,
@@ -235,7 +243,7 @@ if __name__ == "__main__":
     # print(timer.time_elapsed("train"))
 
     # try to load the best model
-    # model = GPT2ModelStructDense.load_from_checkpoint(
-    #     trainer.checkpoint_callback.best_model_path
-    # )
+    model = GPT2Module.load_from_checkpoint(
+        trainer.checkpoint_callback.best_model_path
+    )
     trainer.test(model, datamodule=dm)

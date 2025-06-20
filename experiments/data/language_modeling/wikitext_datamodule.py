@@ -46,6 +46,7 @@ class WikiTextDataModule(L.LightningDataModule):
             num_workers=4,
             collate_fn=collate_fn,
             drop_last=True,
+            persistent_workers=True,
         )
 
     def val_dataloader(self):
@@ -55,6 +56,7 @@ class WikiTextDataModule(L.LightningDataModule):
             shuffle=False,
             num_workers=4,
             collate_fn=collate_fn,
+            persistent_workers=True,
         )
 
     def test_dataloader(self):
@@ -64,4 +66,5 @@ class WikiTextDataModule(L.LightningDataModule):
             shuffle=False,
             num_workers=4,
             collate_fn=collate_fn,
+            persistent_workers=True,
         )
