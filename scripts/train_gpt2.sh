@@ -13,28 +13,32 @@ export NCCL_IB_GID_INDEX=5
 export NCCL_SOCKET_IFNAME="=eth0,eth1,eth2,eth3"
 export NCCL_SOCKET_FAMILY=AF_INET6
 
+MODEL_NAME=${MODEL_NAME:-gpt2}
+BATCH_SIZE=${BATCH_SIZE:-64}
+
 # unique version as timestamp
 run_name="$(date +%Y%m%d_%H%M%S)"
-GLOG_log_dir="$PROJECT_DIR/logs/gpt2/$run_name"
+GLOG_log_dir="$PROJECT_DIR/logs/$MODEL_NAME/$run_name"
 
 mkdir -p "$GLOG_log_dir"
 
-BATCH_SIZE=64
-MODEL_NAME=gpt2
 
-
-python -m experiments.train_gpt2 \
+# nsys profile --stats=true \
+#     --trace=cuda,nvtx,osrt,cublas,cudnn \
+#     --output="$GLOG_log_dir"/nsys_profile \
+python \
+    -m experiments.train_gpt2 \
     --model.model_name="$MODEL_NAME" \
     --data.dataset_path="wikitext" \
     --data.dataset_name="wikitext-103-v1" \
-    --run_ver="$run_name" \
+    --run_name="$run_name" \
     --wandb_project="gpt2-wiki103" \
     --epochs=20 \
     --accumulate_grad_batches=1 \
     --data.train_batch_size_per_device="$BATCH_SIZE" \
     --data.eval_batch_size_per_device="$BATCH_SIZE" \
     --strategy=deepspeed_stage_2 \
-    --precision=bf16-mixed \
+    --precision=16-mixed \
     "$@" |&
     (
         trap '' SIGINT

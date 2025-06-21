@@ -16,8 +16,8 @@ class WikiTextDataModule(L.LightningDataModule):
     tokenizer_name: str = "openai-community/gpt2"
     dataset_path: str = "wikitext"
     dataset_name: str = "wikitext-103-v1"
-    train_batch_size_per_device: int = 8
-    eval_batch_size_per_device: int = 8
+    train_batch_size_per_device: int = 64
+    eval_batch_size_per_device: int = 64
     block_size: int = 1024
 
     def __post_init__(self):
