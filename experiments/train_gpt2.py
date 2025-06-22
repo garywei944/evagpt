@@ -78,14 +78,19 @@ class GPT2Module(L.LightningModule):
             global_step.bit_count() == 1 or global_step % 1000 == 0
         ):
             training_ips = global_step / self.timer.time_elapsed("train")
-            overall_ips = global_step / time.perf_counter() - self.train_start_time
+            overall_ips = global_step / (time.perf_counter() - self.train_start_time)
             time_per_epoch = self.trainer.num_training_batches / training_ips
             time_remaining = (self.train_steps - global_step) / overall_ips
+            msg = (
+                f"{training_ips:.2f} iters/sec - "
+                if training_ips >= 1
+                else f"{1/training_ips:.2f} s/iter - "
+            )
             rank_zero_info(
                 f"Step {global_step} - "
-                f"{training_ips:.2f} iters/sec - "
-                f"Time per epoch: {humanize.naturaldelta(time_per_epoch)} - "
-                f"Time remaining: {humanize.naturaldelta(time_remaining)}"
+                + msg
+                + f"Time per epoch: {humanize.precisedelta(int(time_per_epoch))} - "
+                f"Time remaining: {humanize.precisedelta(int(time_remaining))}"
             )
 
     def forward(self, batch):
@@ -217,7 +222,7 @@ def parse_args():
 if __name__ == "__main__":
     timestamp = datetime.now().isoformat()
     args = parse_args()
-    run_name = args.run_name
+    run_name, model_name = args.run_name, args.model.model_name
     log_dir = Path("logs") / "gpt2" / run_name
 
     L.seed_everything(args.seed + int(os.getenv("LOCAL_RANK", "0")))
@@ -233,7 +238,7 @@ if __name__ == "__main__":
             name=run_name,
             entity="danaus",
         ),
-        # TensorBoardLogger(save_dir=log_dir / "tensorboard", name=model_name),
+        TensorBoardLogger(save_dir=log_dir / "tensorboard", name=model_name),
         CSVLogger(
             save_dir=log_dir / "csv",
             name=run_name,
@@ -244,7 +249,7 @@ if __name__ == "__main__":
         timer,
         ModelCheckpoint(
             dirpath=log_dir / "checkpoints",
-            filename=f"{model.hparams.model_name}-e{{epoch:02d}}-ppl_{{val/perplexity:.2f}}",
+            filename=f"{model_name}-e{{epoch:02d}}-ppl_{{val/perplexity:.2f}}",
             monitor="val/perplexity",
             mode="min",
             save_top_k=1,
@@ -270,8 +275,8 @@ if __name__ == "__main__":
         gradient_clip_algorithm="norm",
         enable_progress_bar=False,
         # limit_train_batches=0.01,  # 1% of the training data, for debugging
-        limit_train_batches=5,  # 5 batches of the training data, for debugging
-        limit_val_batches=5,
+        # limit_train_batches=5,  # 5 batches of the training data, for debugging
+        # limit_val_batches=5,
         # limit_test_batches=15,
         # fast_dev_run=True,
         # profiler=profiler,

@@ -6,7 +6,7 @@ from dataclasses import dataclass
 import math
 
 
-__all__ = ["GPT2Config", "MLP", "CausalSelfAttention", "Block", "GPT2"]
+__all__ = ["GPT2Config", "GPT2"]
 
 CONFIG_ARGS = {
     "gpt2": dict(n_layer=12, n_head=12, n_embd=768),  # 124M params
