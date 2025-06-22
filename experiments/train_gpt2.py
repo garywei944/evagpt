@@ -27,6 +27,7 @@ import regex as re
 import os
 import sys
 import time
+import humanize
 from argparse import Namespace
 
 from experiments.data.language_modeling.wikitext_datamodule import WikiTextDataModule
@@ -36,6 +37,8 @@ torch.set_float32_matmul_precision("medium")
 
 
 class GPT2Module(L.LightningModule):
+    timer: Timer
+
     def __init__(
         self,
         model_name: str = "gpt2",
@@ -57,9 +60,6 @@ class GPT2Module(L.LightningModule):
         self.model = GPT2(config)
         self.metrics = Perplexity()
 
-    def on_train_epoch_start(self):
-        self.train_epoch_start_time = time.perf_counter()
-
     def setup(self, stage: str):
         if stage == "fit":
             total_devices = self.trainer.num_devices * self.trainer.num_nodes
@@ -69,24 +69,31 @@ class GPT2Module(L.LightningModule):
             else:
                 self.train_steps = train_batches * self.trainer.max_epochs
 
+    def on_fit_start(self):
+        self.train_start_time = time.perf_counter()
+
+    def on_train_batch_end(self, outputs, batch, batch_idx: int):
+        global_step = self.trainer.global_step
+        if global_step >= 4 and (
+            global_step.bit_count() == 1 or global_step % 1000 == 0
+        ):
+            training_ips = global_step / self.timer.time_elapsed("train")
+            overall_ips = global_step / time.perf_counter() - self.train_start_time
+            time_per_epoch = self.trainer.num_training_batches / training_ips
+            time_remaining = (self.train_steps - global_step) / overall_ips
+            rank_zero_info(
+                f"Step {global_step} - "
+                f"{training_ips:.2f} iters/sec - "
+                f"Time per epoch: {humanize.naturaldelta(time_per_epoch)} - "
+                f"Time remaining: {humanize.naturaldelta(time_remaining)}"
+            )
+
     def forward(self, batch):
         return self.model(**batch)
 
     def training_step(self, batch, batch_idx: int):
         _, loss = self(batch)
         self.log("train/loss", loss, on_step=True, on_epoch=True, sync_dist=True)
-
-        if batch_idx >= 8 and batch_idx.bit_count() == 1:
-            iters_per_sec = batch_idx / (
-                time.perf_counter() - self.train_epoch_start_time
-            )
-            time_per_epoch = self.trainer.num_training_batches / iters_per_sec
-            rank_zero_info(
-                f"Training step {batch_idx}: "
-                f"{iters_per_sec:.2f} iters/sec, "
-                f"estimated time per epoch: {time_per_epoch:.2f} seconds."
-            )
-
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -219,6 +226,7 @@ if __name__ == "__main__":
     model = GPT2Module(dm=dm, args=args, **args.model)
 
     timer = Timer()
+    model.timer = timer
     loggers = [
         WandbLogger(
             project=args.wandb_project,
@@ -262,8 +270,8 @@ if __name__ == "__main__":
         gradient_clip_algorithm="norm",
         enable_progress_bar=False,
         # limit_train_batches=0.01,  # 1% of the training data, for debugging
-        # limit_train_batches=5,  # 5 batches of the training data, for debugging
-        # limit_val_batches=5,
+        limit_train_batches=5,  # 5 batches of the training data, for debugging
+        limit_val_batches=5,
         # limit_test_batches=15,
         # fast_dev_run=True,
         # profiler=profiler,

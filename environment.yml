@@ -89,6 +89,7 @@ dependencies:
   - distro
   - pyprojroot
   - httpie
+  - humanize
 
   # Visualization
   - matplotlib

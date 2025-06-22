@@ -38,7 +38,7 @@ python \
     --data.train_batch_size_per_device="$BATCH_SIZE" \
     --data.eval_batch_size_per_device="$BATCH_SIZE" \
     --strategy=deepspeed_stage_2 \
-    --precision=16-mixed \
+    --precision=bf16-mixed \
     "$@" |&
     (
         trap '' SIGINT
