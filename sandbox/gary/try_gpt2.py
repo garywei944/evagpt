@@ -26,6 +26,7 @@ from absl import logging
 from src.jax_gpt2 import *
 
 import jax
+from transformers import GPT2LMHeadModel
 
 jax.config.update("jax_default_matmul_precision", "float32")
 # jax.config.update("jax_disable_jit", True)

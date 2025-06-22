@@ -222,7 +222,7 @@ if __name__ == "__main__":
     timestamp = datetime.now().isoformat()
     args = parse_args()
     run_name, model_name = args.run_name, args.model.model_name
-    log_dir = Path("logs") / "gpt2" / run_name
+    log_dir = Path("logs") / args.model.model_name / run_name
 
     L.seed_everything(args.seed + int(os.getenv("LOCAL_RANK", "0")))
 
