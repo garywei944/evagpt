@@ -206,6 +206,7 @@ def parse_args():
     parser.add_argument("--gradient_clip_val", type=float, default=1.0)
     parser.add_argument("--strategy", type=str, default="deepspeed_stage_2")
     parser.add_argument("--precision", type=str, default="16-mixed")
+    parser.add_argument("--test_only", action="store_true", default=False)
 
     parser.add_lightning_class_args(GPT2Module, "model")
     parser.add_lightning_class_args(WikiTextDataModule, "data")
@@ -243,63 +244,70 @@ if __name__ == "__main__":
             name=run_name,
         ),
     ]
-    callbacks = [
-        LearningRateMonitor(logging_interval="step"),
-        timer,
-        ModelCheckpoint(
-            dirpath=log_dir / "checkpoints",
-            filename=f"{model_name}-e{{epoch:02d}}-ppl_{{val/perplexity:.2f}}",
-            monitor="val/perplexity",
-            mode="min",
-            save_top_k=1,
-            save_weights_only=True,
-            auto_insert_metric_name=False,
-            verbose=True,
-        ),
-        ModelSummary(max_depth=-1),
-    ]
-    profiler = PyTorchProfiler(
-        dirpath=log_dir / "profiler",
-        filename="pytorch_profiler",
-        group_by_input_shapes=True,
-        row_limit=-1,
-        sort_by_key="cpu_time_total",
-    )
-    trainer = L.Trainer(
-        logger=loggers,
-        callbacks=callbacks,
-        max_epochs=args.epochs,
-        accumulate_grad_batches=args.accumulate_grad_batches,
-        gradient_clip_val=args.gradient_clip_val,
-        gradient_clip_algorithm="norm",
-        enable_progress_bar=False,
-        # limit_train_batches=0.01,  # 1% of the training data, for debugging
-        # limit_train_batches=5,  # 5 batches of the training data, for debugging
-        # limit_val_batches=5,
-        # limit_test_batches=15,
-        # fast_dev_run=True,
-        profiler=profiler,
-        accelerator="gpu",
-        devices="auto",
-        strategy=args.strategy,
-        precision=args.precision,
-    )
+    if not args.test_only:
+        callbacks = [
+            LearningRateMonitor(logging_interval="step"),
+            timer,
+            ModelCheckpoint(
+                dirpath=log_dir / "checkpoints",
+                filename=f"{model_name}-e{{epoch:02d}}-ppl_{{val/perplexity:.2f}}",
+                monitor="val/perplexity",
+                mode="min",
+                save_top_k=1,
+                save_weights_only=True,
+                auto_insert_metric_name=False,
+                verbose=True,
+            ),
+            ModelSummary(max_depth=-1),
+        ]
+        # profiler = PyTorchProfiler(
+        #     dirpath=log_dir / "profiler",
+        #     filename="pytorch_profiler",
+        #     group_by_input_shapes=True,
+        #     row_limit=-1,
+        #     sort_by_key="cpu_time_total",
+        # )
+        trainer = L.Trainer(
+            logger=loggers,
+            callbacks=callbacks,
+            max_epochs=args.epochs,
+            accumulate_grad_batches=args.accumulate_grad_batches,
+            gradient_clip_val=args.gradient_clip_val,
+            gradient_clip_algorithm="norm",
+            enable_progress_bar=False,
+            # limit_train_batches=0.01,  # 1% of the training data, for debugging
+            # limit_train_batches=5,  # 5 batches of the training data, for debugging
+            # limit_val_batches=5,
+            # limit_test_batches=15,
+            # fast_dev_run=True,
+            # profiler=profiler,
+            accelerator="gpu",
+            devices="auto",
+            strategy=args.strategy,
+            precision=args.precision,
+        )
 
-    # Sanity check: gpt2-large perplexity on wikitext-2 test = 18.5486
-    # trainer.test(model, datamodule=dm)
+        # Sanity check: gpt2-large perplexity on wikitext-2 test = 18.5486
+        # trainer.test(model, datamodule=dm)
 
-    # trainer.validate(model, datamodule=dm)
+        # trainer.validate(model, datamodule=dm)
 
-    trainer.fit(model, datamodule=dm)
-    rank_zero_info(f"Training completed in {timer.time_elapsed('train'):.2f} seconds.")
+        trainer.fit(model, datamodule=dm)
+        rank_zero_info(
+            f"Training completed in {timer.time_elapsed('train'):.2f} seconds."
+        )
 
-    # ! Test using 1 GPU
-    torch.distributed.destroy_process_group()
+        # ! Test using 1 GPU
+        torch.distributed.destroy_process_group()
 
-    if trainer.global_rank != 0:
-        sys.exit(0)
+        if trainer.global_rank != 0:
+            sys.exit(0)
 
-    best_model_path = Path(trainer.checkpoint_callback.best_model_path)
+        best_model_path = Path(trainer.checkpoint_callback.best_model_path)
+    else:
+        assert args.ckpt is not None, "Checkpoint path must be provided for testing."
+        best_model_path = Path(args.ckpt)
+
     if args.strategy.startswith("deepspeed"):
         rank_zero_info("Converting DeepSpeed Zero checkpoint to FP32 state dict...")
         ckpt_path = best_model_path / "pytorch_model.bin"

@@ -10,7 +10,7 @@ channels:
   - anaconda
   - pytorch
 dependencies:
-  - python>=3.10
+  - python>=3.12
   - pip
   - cython
   - pocl # for OpenCL
@@ -23,7 +23,7 @@ dependencies:
   # - nvidia::cuda
   # - nvidia/label/cuda-12.9.1::cuda
   - nvidia/label/cuda-12.2.2::cuda
-  - conda-forge::cudnn
+  - conda-forge::cudnn~=9.10
   - conda-forge::nccl
 
   # essential functionality
@@ -55,12 +55,12 @@ dependencies:
   - tiktoken
 
   # pytorch with specific CUDA version
-  - conda-forge::pytorch=*=*cuda*
+  - conda-forge::pytorch~=2.5.1=*cuda*
   - conda-forge::torchvision=*=*cuda*
-  - pytorch::torchtriton
-  - conda-forge::flash-attn
+  - pytorch::torchtriton~=3.1.0
+  - conda-forge::flash-attn~=2.7.2
   - conda-forge::deepspeed=*=cuda*
-  - conda-forge::bitsandbytes=*=cuda*
+  - conda-forge::bitsandbytes~=0.16.3=cuda*
   - conda-forge::pytorch_geometric
   - conda-forge::pytorch_sparse
 
@@ -79,7 +79,7 @@ dependencies:
   - conda-forge::peft
 
   # Lightning
-  - conda-forge::lightning
+  - conda-forge::lightning~=2.5.1
   - conda-forge::torchmetrics # lighting metrics
 
   # utils
