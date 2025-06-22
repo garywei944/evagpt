@@ -6,7 +6,6 @@ from lightning.pytorch.callbacks import (
     Timer,
     ModelCheckpoint,
     ModelSummary,
-    ProgressBar,
 )
 from lightning.pytorch.profilers import PyTorchProfiler
 from lightning.pytorch.utilities import rank_zero_info, rank_zero_warn, rank_zero_only
@@ -279,7 +278,7 @@ if __name__ == "__main__":
         # limit_val_batches=5,
         # limit_test_batches=15,
         # fast_dev_run=True,
-        # profiler=profiler,
+        profiler=profiler,
         accelerator="gpu",
         devices="auto",
         strategy=args.strategy,
