@@ -1,5 +1,5 @@
 import transformers
-from transformers import PreTrainedTokenizerBase
+from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 from transformers.testing_utils import CaptureLogger
 from datasets import load_dataset, DatasetDict
 

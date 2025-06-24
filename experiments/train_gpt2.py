@@ -27,10 +27,13 @@ import os
 import sys
 import time
 import humanize
+import math
 from argparse import Namespace
 
 from experiments.data.language_modeling.wikitext_datamodule import WikiTextDataModule
 from src.gpt2 import GPT2Config, GPT2
+from src.linear.utils import replace_module
+from src.linear.hodlr import HODLRLinear
 
 torch.set_float32_matmul_precision("medium")
 
@@ -45,6 +48,11 @@ class GPT2Module(L.LightningModule):
         weight_decay: float = 0.1,
         dm: WikiTextDataModule = None,  # type: ignore
         args: Namespace = None,  # type: ignore
+        structured_type: str = "dense",
+        init_strategy: str = "projection",
+        # For HODLR
+        min_block_size: int = 64,
+        rank: int = 64,
     ):
         super().__init__()
 
@@ -59,6 +67,20 @@ class GPT2Module(L.LightningModule):
         self.model = GPT2(config)
         self.metrics = Perplexity()
 
+        # Replace the linear layers with structured ones
+        replace_module(
+            self.model,
+            structured_type=structured_type,
+            init_strategy=init_strategy,
+            min_block_size=min_block_size,
+            max_rank=rank,
+        )
+
+        # Fix c_proj std for gpt2
+        for name, module in self.model.named_modules():
+            if isinstance(module, HODLRLinear) and name.endswith("c_proj"):
+                module.reset_parameters(std=0.02 / math.sqrt(2 * config.n_layer))
+
     def setup(self, stage: str):
         if stage == "fit":
             total_devices = self.trainer.num_devices * self.trainer.num_nodes
@@ -66,7 +88,10 @@ class GPT2Module(L.LightningModule):
             if self.trainer.max_epochs is None:
                 self.train_steps = self.trainer.max_steps
             else:
-                self.train_steps = train_batches * self.trainer.max_epochs
+                self.train_steps = (
+                    math.ceil(train_batches / self.hparams.accumulate_grad_batches)
+                    * self.trainer.max_epochs
+                )
 
     def on_fit_start(self):
         self.train_start_time = time.perf_counter()

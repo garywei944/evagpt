@@ -59,8 +59,8 @@ dependencies:
   - conda-forge::torchvision=*=*cuda*
   - pytorch::torchtriton~=3.1.0
   - conda-forge::flash-attn~=2.7.2
-  - conda-forge::deepspeed=*=cuda*
-  - conda-forge::bitsandbytes~=0.16.3=cuda*
+  - conda-forge::deepspeed~=0.16.3=cuda*
+  - conda-forge::bitsandbytes~=0.46.0=cuda*
   - conda-forge::pytorch_geometric
   - conda-forge::pytorch_sparse
 
