@@ -51,7 +51,7 @@ dependencies:
   - tiktoken
 
   # # pytorch with specific CUDA version
-  # - conda-forge::pytorch=*=*cuda*
+  - conda-forge::pytorch=*=*cuda* # torch data loader is useful
   # - conda-forge::torchvision=*=*cuda*
   # - pytorch::torchtriton
   # - conda-forge::flash-attn
