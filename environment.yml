@@ -1,0 +1,141 @@
+# Typical conda environment for a reproducible machine learning project
+# Use `mamba env create -f environment.yml`
+# or `conda env create -f environment.yml` to install the environment
+# Created and maintained by garywei944(garywei944@gmail.com)
+
+name: "evagpt"
+channels:
+  - nvidia # for CUDA
+  # - pytorch
+  - conda-forge
+  - anaconda
+  - defaults
+dependencies:
+  - python>=3.13
+  - pip>=25.3
+
+  # System utils
+  - psutil
+  - nvtop
+
+  # Nvidia cuda drivers
+  - cuda
+  - cudnn
+  - nccl
+
+  # essential functionality
+  - overrides
+  - python-dotenv
+  - ruamel.yaml
+  - toml
+  - absl-py
+  - tqdm
+  - attrs
+  - tabulate
+  - typing_extensions
+  - rich
+
+  # argparse
+  - typed-argument-parser # for type hinting in argparse
+  - jsonargparse # required by lightning[extra]
+  - typeshed-client>=2.1.0 # for jsonargparse[signatures] required by lightning[extra]
+
+  # Frameworks
+  - numpy
+  - scipy
+  - pandas
+  - openpyxl # to open excel files
+  - pandarallel # for parallel computing panda dataframe
+  - einops
+  - sentencepiece
+  - tiktoken
+
+  # # pytorch with specific CUDA version
+  # - conda-forge::pytorch=*=*cuda*
+  # - conda-forge::torchvision=*=*cuda*
+  # - pytorch::torchtriton
+  # - conda-forge::flash-attn
+  # - conda-forge::deepspeed=*=cuda*
+  # - conda-forge::bitsandbytes=*=cuda*
+  # - conda-forge::pytorch_geometric
+  # - conda-forge::pytorch_sparse
+
+  # # scikit-learn and graph learning
+  # - scikit-learn
+  # - scikit-image
+  # - networkx
+
+  # # PyTorch
+  # - torchinfo
+
+  # Huggingface
+  # - conda-forge::transformers
+  - conda-forge::datasets
+  # - conda-forge::accelerate
+  # - conda-forge::evaluate
+  # - conda-forge::peft
+
+  # # Lightning
+  # - conda-forge::lightning
+  # - conda-forge::torchmetrics # lighting metrics
+
+  # JAX
+  - conda-forge::jaxlib>=0.7.2=*cuda* # flax <- tensorstore <- libprotobuf breaks higher version?
+  - conda-forge::jax>=0.7.2
+  - conda-forge::flax
+  - conda-forge::equinox
+  - conda-forge::jaxtyping
+  - conda-forge::beartype
+
+  # utils
+  - bayesian-optimization
+  - questionary
+  - distro
+  - pyprojroot
+  - httpie
+  - httpx
+  - atomicwrites
+  - anyio
+
+  # Visualization
+  - matplotlib
+  - seaborn
+  - moviepy # for generating gif
+
+  # Development
+  - jupyter
+  - wandb
+  - tensorboardx
+
+  # PyPI common practice
+  - click
+  - setuptools_scm
+  - twine # for uploading to pypi
+  - blackd # black daemon, for python formatting
+  - ruff # linter
+  - mypy # for type checking
+  - bump2version # for version bump
+  - watchdog # filesystem event
+  - sphinx # doc
+  - pre-commit # for git hooks
+  - identify>=2.6.15
+
+  # Testing
+  - pytest
+  - pytest-asyncio
+  - pytest-cov
+  - pytest-forked
+  - pytest-mock
+  - pytest-subtests
+  - pytest-xdist
+
+  # If you need to install pip packages, don't do `pip install xxx`
+  # Add the package here and run `mamba env update -f environment.yml --prune`
+  # for dependency completeness.
+  - pip:
+      - build
+      - sh>=2.2.2
+      - arxiv-latex-cleaner
+      - py-dagviz
+      - readerwriterlock
+      - aiorwlock
