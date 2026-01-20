@@ -69,15 +69,15 @@ dependencies:
   # - torchinfo
 
   # Huggingface
-  # - conda-forge::transformers
+  - conda-forge::transformers
   - conda-forge::datasets
   # - conda-forge::accelerate
   # - conda-forge::evaluate
   # - conda-forge::peft
 
-  # # Lightning
-  # - conda-forge::lightning
-  # - conda-forge::torchmetrics # lighting metrics
+  # Lightning
+  - conda-forge::lightning
+  - conda-forge::torchmetrics # lighting metrics
 
   # JAX
   - conda-forge::jaxlib>=0.7.2=*cuda* # flax <- tensorstore <- libprotobuf breaks higher version?
@@ -86,6 +86,9 @@ dependencies:
   - conda-forge::equinox
   - conda-forge::jaxtyping
   - conda-forge::beartype
+
+  # TensorFlow
+  # - conda-forge::tensorflow
 
   # utils
   - bayesian-optimization
@@ -140,3 +143,5 @@ dependencies:
       - readerwriterlock
       - aiorwlock
       - flash-attn-jax
+      - jax-dataloader
+      - tensorflow[and-cuda] # ! conda tensorflow is not maintained well, use pip version

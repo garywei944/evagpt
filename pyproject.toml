@@ -23,7 +23,7 @@ ignore = [
 known-first-party = ["evagpt"]
 
 [tool.ruff.lint.per-file-ignores]
-"evagpt/__main__.py" = ["E402"]
+"experiments/*.py" = ["E402"]
 
 # ---------------- mypy ----------------
 [tool.mypy]

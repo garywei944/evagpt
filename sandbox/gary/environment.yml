@@ -1,0 +1,28 @@
+name: "evil"
+channels:
+  - nvidia # for CUDA
+  # - pytorch
+  - conda-forge
+  - anaconda
+  - defaults
+dependencies:
+  - python>=3.13
+  - pip>=25.3
+
+  # Nvidia cuda drivers
+  - cuda
+  - cudnn
+  - nccl
+
+  - conda-forge::pytorch=*=*cuda* # torch data loader is useful
+
+  # - conda-forge::transformers
+  # - conda-forge::datasets
+
+  - conda-forge::jaxlib>=0.7.2=*cuda* # flax <- tensorstore <- libprotobuf breaks higher version?
+  - conda-forge::jax>=0.7.2
+
+  # - conda-forge::tensorflow
+
+  - pip:
+      - tensorflow[and-cuda]

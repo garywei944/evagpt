@@ -23,7 +23,7 @@ class Args(Tap):
     data_path: Path = PROJECT_ROOT / "data" / "processed"
 
 
-def preprocess_openwebtext(
+def preprocess_dataset(
     dataset_name: str = "Skylion007/openwebtext",
     dataset_config_name: str | None = None,
     block_size: int = 1024,
@@ -46,6 +46,13 @@ def preprocess_openwebtext(
         return {"input_ids": chunks, "labels": chunks}
 
     raw_datasets = datasets.load_dataset(dataset_name, dataset_config_name, num_proc=num_workers)
+
+    if "validation" not in raw_datasets:
+        logger.info("No validation split found, creating from train split")
+        raw_datasets = raw_datasets["train"].train_test_split(
+            test_size=0.0005, seed=2357, shuffle=True
+        )
+
     tokenized_datasets = raw_datasets.map(
         tokenize,
         batched=True,
@@ -69,7 +76,7 @@ if __name__ == "__main__":
     args = Args().parse_args()
     logger.info("Starting preprocessing with args: %s", args)
 
-    ds = preprocess_openwebtext(
+    ds = preprocess_dataset(
         dataset_name=args.dataset_name,
         dataset_config_name=args.dataset_config_name,
         block_size=args.block_size,

@@ -1,5 +1,6 @@
 import logging
 import math
+from typing import Self
 
 import attrs
 import equinox as eqx
@@ -10,7 +11,7 @@ import optax
 from beartype import beartype as typechecker
 from jaxtyping import Array, Float, Int, PRNGKeyArray, jaxtyped
 
-__all__ = ["GPTConfig", "GPT2"]
+__all__ = ["GPT2Config", "GPT2"]
 
 logger = logging.getLogger(__name__)
 
@@ -18,16 +19,28 @@ std_init = jax.nn.initializers.truncated_normal(0.02)
 
 
 @attrs.define
-class GPTConfig:
+class GPT2Config:
     block_size: int = 1024
     # GPT-2 vocab size of 50257, rounded up to nearest multiple of 64 for efficiency
     vocab_size: int = 50304
     n_layers: int = 12
     n_heads: int = 12
     n_embd: int = 768
-    dropout: float = 0.1
-    bias: bool = True
+    dropout: float = 0.0
+    bias: bool = False
     dtype: jnp.dtype = jnp.bfloat16
+
+    @classmethod
+    def from_pretrained(cls, model_name: str) -> Self:
+        if model_name == "gpt2":
+            return cls()
+        if model_name == "gpt2-medium":
+            return cls(n_layers=24, n_heads=16, n_embd=1024)  # type: ignore[call-arg]
+        if model_name == "gpt2-large":
+            return cls(n_layers=36, n_heads=20, n_embd=1280)  # type: ignore[call-arg]
+        if model_name == "gpt2-xl":
+            return cls(n_layers=48, n_heads=25, n_embd=1600)  # type: ignore[call-arg]
+        raise ValueError(f"Unknown model name: {model_name}")
 
 
 def init_linear(
@@ -51,12 +64,12 @@ def init_linear(
 
 
 class MLP(eqx.Module):
-    config: GPTConfig
+    config: GPT2Config
     c_fc: eqx.nn.Linear
     c_proj: eqx.nn.Linear
     dropout: eqx.nn.Dropout
 
-    def __init__(self, config: GPTConfig, *, key: PRNGKeyArray):
+    def __init__(self, config: GPT2Config, *, key: PRNGKeyArray):
         super().__init__()
 
         self.config = config
@@ -76,22 +89,24 @@ class MLP(eqx.Module):
         self.dropout = eqx.nn.Dropout(config.dropout)
 
     @jaxtyped(typechecker=typechecker)
-    def __call__(self, x: Float[Array, "B T C"], *, key: PRNGKeyArray) -> Float[Array, "B T C"]:
+    def __call__(
+        self, x: Float[Array, "B T C"], *, key: PRNGKeyArray | None = None, inference: bool = False
+    ) -> Float[Array, "B T C"]:
         x = jax.vmap(jax.vmap(self.c_fc))(x)
         x = jax.nn.gelu(x)
         x = jax.vmap(jax.vmap(self.c_proj))(x)
-        x = self.dropout(x, key=key)
+        x = self.dropout(x, key=key, inference=inference)
         return x
 
 
 class CausalSelfAttention(eqx.Module):
-    config: GPTConfig
+    config: GPT2Config
 
     c_attn: eqx.nn.Linear
     c_proj: eqx.nn.Linear
     dropout: eqx.nn.Dropout
 
-    def __init__(self, config: GPTConfig, *, key: PRNGKeyArray):
+    def __init__(self, config: GPT2Config, *, key: PRNGKeyArray):
         super().__init__()
 
         self.config = config
@@ -111,7 +126,9 @@ class CausalSelfAttention(eqx.Module):
         self.dropout = eqx.nn.Dropout(config.dropout)
 
     @jaxtyped(typechecker=typechecker)
-    def __call__(self, x: Float[Array, "B T C"], *, key: PRNGKeyArray) -> Float[Array, "B T C"]:
+    def __call__(
+        self, x: Float[Array, "B T C"], *, key: PRNGKeyArray | None = None, inference: bool = False
+    ) -> Float[Array, "B T C"]:
         B, T, C = x.shape
         nh, hs = self.config.n_heads, C // self.config.n_heads
 
@@ -123,7 +140,7 @@ class CausalSelfAttention(eqx.Module):
         # out: (B, T, nh, hs)
         out = jax.nn.dot_product_attention(q, k, v, is_causal=True, implementation="cudnn")
         out = out.reshape(B, T, C)
-        out = self.dropout(out, key=key)
+        out = self.dropout(out, key=key, inference=inference)
 
         return out
 
@@ -134,7 +151,7 @@ class Block(eqx.Module):
     ln2: eqx.nn.LayerNorm
     mlp: MLP
 
-    def __init__(self, config: GPTConfig, *, key: PRNGKeyArray):
+    def __init__(self, config: GPT2Config, *, key: PRNGKeyArray):
         super().__init__()
         key_attn, key_mlp = jrandom.split(key, 2)
         self.ln1 = eqx.nn.LayerNorm(shape=config.n_embd, use_bias=config.bias, dtype=config.dtype)
@@ -143,15 +160,17 @@ class Block(eqx.Module):
         self.mlp = MLP(config=config, key=key_mlp)
 
     @jaxtyped(typechecker=typechecker)
-    def __call__(self, x: Float[Array, "B T C"], *, key: PRNGKeyArray) -> Float[Array, "B T C"]:
+    def __call__(
+        self, x: Float[Array, "B T C"], *, key: PRNGKeyArray | None = None, inference: bool = False
+    ) -> Float[Array, "B T C"]:
         key_attn, key_mlp = jrandom.split(key, 2)
-        x = x + self.attn(jax.vmap(jax.vmap(self.ln1))(x), key=key_attn)
-        x = x + self.mlp(jax.vmap(jax.vmap(self.ln2))(x), key=key_mlp)
+        x = x + self.attn(jax.vmap(jax.vmap(self.ln1))(x), key=key_attn, inference=inference)
+        x = x + self.mlp(jax.vmap(jax.vmap(self.ln2))(x), key=key_mlp, inference=inference)
         return x
 
 
 class GPT2(eqx.Module):
-    config: GPTConfig
+    config: GPT2Config
 
     wte: eqx.nn.Embedding
     wpe: eqx.nn.Embedding
@@ -159,7 +178,7 @@ class GPT2(eqx.Module):
     h: list[Block]
     ln_f: eqx.nn.LayerNorm
 
-    def __init__(self, config: GPTConfig, *, key: PRNGKeyArray):
+    def __init__(self, config: GPT2Config, *, key: PRNGKeyArray):
         super().__init__()
 
         self.config = config
@@ -185,17 +204,18 @@ class GPT2(eqx.Module):
         input_ids: Int[Array, "B T"],
         labels: Int[Array, "B T"] | None = None,
         *,
-        key: PRNGKeyArray,
+        key: PRNGKeyArray | None = None,
+        inference: bool = False,
     ) -> tuple[Float[Array, "B T V"], Float[Array, ""] | None]:
         _, T = input_ids.shape
         keys = jrandom.split(key, self.config.n_layers + 1)
 
         tok_emb = jax.vmap(jax.vmap(self.wte))(input_ids)
         pos_emb = jax.vmap(self.wpe)(jnp.arange(T))
-        x = self.dropout(tok_emb + pos_emb, key=keys[0])
+        x = self.dropout(tok_emb + pos_emb, key=keys[0], inference=inference)
 
         for i, block in enumerate(self.h):
-            x = block(x, key=keys[i + 1])
+            x = block(x, key=keys[i + 1], inference=inference)
         x = jax.vmap(jax.vmap(self.ln_f))(x)
 
         # logits: (B, T, C)
@@ -211,27 +231,27 @@ class GPT2(eqx.Module):
         return logits, loss.mean()
 
 
-if __name__ == "__main__":
-    key = jrandom.key(0)
-    config = GPTConfig()
+# if __name__ == "__main__":
+#     key = jrandom.key(0)
+#     config = GPT2Config()
 
-    key, key_model, key_data = jrandom.split(key, 3)
+#     key, key_model, key_data = jrandom.split(key, 3)
 
-    model = GPT2(config=config, key=key_model)
-    x = jrandom.randint(key_data, (2, 1024), 0, config.vocab_size)
-    y = x
+#     model = GPT2(config=config, key=key_model)
+#     x = jrandom.randint(key_data, (2, 1024), 0, config.vocab_size)
+#     y = x
 
-    logits, loss = model(x, labels=y, key=key)
-    print("logits shape:", logits.shape)
-    print("loss:", loss)
+#     logits, loss = model(x, labels=y, key=key)
+#     print("logits shape:", logits.shape)
+#     print("loss:", loss)
 
-    print(logits[:, :10, :10])
+#     print(logits[:, :10, :10])
 
-    # # mlp = MLP(config=config, key=key_model)
-    # # attn = CausalSelfAttention(config=config, key=key_model)
-    # block = Block(config=config, key=key_model)
-    # x = jrandom.normal(key_data, (2, 1024, config.n_embd), dtype=config.dtype)
-    # key, key_mlp = jrandom.split(key, 2)
-    # y = block(x, key=key_mlp)
-    # print("Block output shape:", y.shape)
-    # print(y)
+#     # # mlp = MLP(config=config, key=key_model)
+#     # # attn = CausalSelfAttention(config=config, key=key_model)
+#     # block = Block(config=config, key=key_model)
+#     # x = jrandom.normal(key_data, (2, 1024, config.n_embd), dtype=config.dtype)
+#     # key, key_mlp = jrandom.split(key, 2)
+#     # y = block(x, key=key_mlp)
+#     # print("Block output shape:", y.shape)
+#     # print(y)
