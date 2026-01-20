@@ -139,3 +139,4 @@ dependencies:
       - py-dagviz
       - readerwriterlock
       - aiorwlock
+      - flash-attn-jax
