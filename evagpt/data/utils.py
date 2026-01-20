@@ -32,7 +32,7 @@ def get_dataloader(
     )
     if shuffle:
         ds = ds.shuffle(buffer_size=SHUFFLE_BUFFER_SIZE, reshuffle_each_iteration=True)
-    ds = ds.repeat(epochs).prefetch(tf.data.AUTOTUNE).as_numpy_iterator()
+    ds = ds.cache().repeat(epochs).prefetch(tf.data.AUTOTUNE).as_numpy_iterator()
 
     steps_per_epoch = n // batch_size if drop_last else math.ceil(n / batch_size)
 

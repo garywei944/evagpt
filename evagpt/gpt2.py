@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 std_init = jax.nn.initializers.truncated_normal(0.02)
 
 
-@attrs.define
+@attrs.define(frozen=True)
 class GPT2Config:
     block_size: int = 1024
     # GPT-2 vocab size of 50257, rounded up to nearest multiple of 64 for efficiency
