@@ -1,4 +1,4 @@
-from evagpt.utils import logging_utils
+from evakit import logging_utils
 
 logging_utils.setup_root_logger()
 
