@@ -51,7 +51,7 @@ dependencies:
   - tiktoken
 
   # # pytorch with specific CUDA version
-  - conda-forge::pytorch=*=*cuda* # torch data loader is useful
+  # - conda-forge::pytorch=*=*cuda* # torch data loader is useful
   # - conda-forge::torchvision=*=*cuda*
   # - pytorch::torchtriton
   # - conda-forge::flash-attn
@@ -82,6 +82,7 @@ dependencies:
   # JAX
   - conda-forge::jaxlib>=0.7.2=*cuda* # flax <- tensorstore <- libprotobuf breaks higher version?
   - conda-forge::jax>=0.7.2
+  - conda-forge::grain
   - conda-forge::flax
   - conda-forge::equinox
   - conda-forge::jaxtyping
@@ -99,6 +100,8 @@ dependencies:
   - httpx
   - atomicwrites
   - anyio
+  - readerwriterlock
+  - aiorwlock
 
   # Visualization
   - matplotlib
@@ -140,8 +143,4 @@ dependencies:
       - sh>=2.2.2
       - arxiv-latex-cleaner
       - py-dagviz
-      - readerwriterlock
-      - aiorwlock
       - flash-attn-jax
-      - jax-dataloader
-      - tensorflow[and-cuda] # ! conda tensorflow is not maintained well, use pip version
