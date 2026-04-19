@@ -3,7 +3,7 @@ name: pre-commit
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [ main ]
 
 jobs:
   pre-commit:
@@ -12,16 +12,39 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zsh lua5.4 liblua5.4-dev luarocks
+          sudo luarocks install luacheck
 
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
           python-version: "3.14"
 
-      - name: Install pre-commit
+      - name: Cache pre-commit
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pre-commit
+          key: precommit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
+
+      - name: Install dependencies
+        run: pip install pre-commit commitizen
+
+      - name: Check commit messages (cz)
         run: |
-          python -m pip install --upgrade pip
-          pip install pre-commit
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            # PRs: Check all commits between base and head
+            cz check --rev-range ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}
+          elif [ "${{ github.event_name }}" == "push" ]; then
+            # Pushes: Check all commits between the previous state and the new state
+            # Handles multiple commits in a single push
+            cz check --rev-range ${{ github.event.before }}..${{ github.event.after }}
+          fi
 
       - name: Run pre-commit
         run: |
