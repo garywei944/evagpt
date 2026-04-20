@@ -49,9 +49,7 @@ def preprocess_dataset(
 
     if "validation" not in raw_datasets:
         logger.info("No validation split found, creating from train split")
-        raw_datasets = raw_datasets["train"].train_test_split(
-            test_size=0.0005, seed=2357, shuffle=True
-        )
+        raw_datasets = raw_datasets["train"].train_test_split(test_size=0.0005, seed=2357, shuffle=True)
 
     tokenized_datasets = raw_datasets.map(
         tokenize,

@@ -75,9 +75,7 @@ class MLP(eqx.Module):
         self.config = config
 
         key_fc, key_proj = jrandom.split(key, 2)
-        self.c_fc = init_linear(
-            config.n_embd, 4 * config.n_embd, use_bias=config.bias, dtype=config.dtype, key=key_fc
-        )
+        self.c_fc = init_linear(config.n_embd, 4 * config.n_embd, use_bias=config.bias, dtype=config.dtype, key=key_fc)
         self.c_proj = init_linear(
             4 * config.n_embd,
             config.n_embd,
@@ -185,14 +183,10 @@ class GPT2(eqx.Module):
 
         keys = jrandom.split(key, 2 + config.n_layers)
         self.wte = eqx.nn.Embedding(
-            weight=init_linear(
-                config.n_embd, config.vocab_size, use_bias=False, dtype=config.dtype, key=keys[0]
-            ).weight
+            weight=init_linear(config.n_embd, config.vocab_size, use_bias=False, dtype=config.dtype, key=keys[0]).weight
         )
         self.wpe = eqx.nn.Embedding(
-            weight=init_linear(
-                config.n_embd, config.block_size, use_bias=False, dtype=config.dtype, key=keys[1]
-            ).weight
+            weight=init_linear(config.n_embd, config.block_size, use_bias=False, dtype=config.dtype, key=keys[1]).weight
         )
         self.dropout = eqx.nn.Dropout(config.dropout)
         self.h = [Block(config=config, key=keys[i + 2]) for i in range(config.n_layers)]

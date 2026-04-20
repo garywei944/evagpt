@@ -6,15 +6,15 @@ license = "MIT"
 authors = [{ name = "Gary Wei", email = "garywei944@gmail.com" }]
 readme = "README.md"
 classifiers = [
-  #    "Development Status :: 2 - Pre-Alpha",
-  "Intended Audience :: Developers",
-  "Natural Language :: English",
-  "Operating System :: OS Independent",
-  "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.11",
-  "Programming Language :: Python :: 3.12",
-  "Programming Language :: Python :: 3.13",
-  "Programming Language :: Python :: 3.14",
+    #    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Developers",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
 ]
 dynamic = ["version"]
 
@@ -41,7 +41,7 @@ target-version = "py314"
 
 [tool.ruff.lint]
 select = ["E", "F", "B", "I", "UP"]
-ignore = []
+ignore = ["F722"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["eden", "evakit"]
@@ -49,8 +49,8 @@ known-first-party = ["eden", "evakit"]
 [tool.ruff.format]
 quote-style = "double"
 
-# [tool.ruff.lint.per-file-ignores]
-# "eden/__main__.py" = ["E402"]
+[tool.ruff.lint.per-file-ignores]
+"experiments/train_gpt2_owt.py" = ["E402"]
 
 # ---------------- mypy ----------------
 [tool.mypy]
@@ -75,11 +75,11 @@ ignore_missing_imports = true
 
 [tool.pylint.typecheck]
 confidence = [
-  "HIGH",
-  "CONTROL_FLOW",
-  "INFERENCE",
-  "INFERENCE_FAILURE",
-  "UNDEFINED",
+    "HIGH",
+    "CONTROL_FLOW",
+    "INFERENCE",
+    "INFERENCE_FAILURE",
+    "UNDEFINED",
 ]
 generated-members = ["sh"]
 

@@ -1,5 +1,6 @@
 import math
-from typing import Any, Generator
+from collections.abc import Generator
+from typing import Any
 
 import datasets
 import flax.jax_utils
@@ -17,7 +18,7 @@ def get_dataloader(
     shuffle: bool = True,
     drop_last: bool = True,
     prefetch_size: int = 4,
-) -> tuple[Generator[Any, None, None], int]:
+) -> tuple[Generator[Any], int]:
     n = dataset.num_rows
 
     if jax.process_count() > 1:
