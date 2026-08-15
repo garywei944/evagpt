@@ -15,8 +15,8 @@ import jax.numpy as jnp
 import jax.random as jrandom
 import tensorflow as tf
 
-import evagpt.data.utils
-import evagpt.gpt2
+import archived.evagpt.data.utils
+import archived.evagpt.gpt2
 
 logger = logging.getLogger(__name__)
 
@@ -35,13 +35,13 @@ def train_step(model, batch, rng):
 
 def main():
     rng = jrandom.PRNGKey(SEED)
-    config = evagpt.gpt2.GPT2Config.from_pretrained(MODEL_NAME)
+    config = archived.evagpt.gpt2.GPT2Config.from_pretrained(MODEL_NAME)
 
     rng, init_rng, data_rng = jrandom.split(rng, 3)
-    model = evagpt.gpt2.GPT2(config=config, key=init_rng)
+    model = archived.evagpt.gpt2.GPT2(config=config, key=init_rng)
 
     ds = datasets.load_from_disk("data/processed/owt_gpt2_bs1024")
-    train_loader, steps_per_epoch = evagpt.data.utils.get_dataloader(
+    train_loader, steps_per_epoch = archived.evagpt.data.utils.get_dataloader(
         ds["train"], batch_size=64, epochs=1, shuffle=True, drop_last=True
     )
 

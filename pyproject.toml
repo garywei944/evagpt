@@ -1,7 +1,7 @@
 [project]
-name = "eva_arch"
+name = "evagpt"
 description = "Arch Linux dotfiles"
-requires-python = ">=3.14"
+requires-python = ">=3.11"
 license = "MIT"
 authors = [{ name = "Gary Wei", email = "garywei944@gmail.com" }]
 readme = "README.md"
@@ -49,8 +49,8 @@ known-first-party = ["eden", "evakit"]
 [tool.ruff.format]
 quote-style = "double"
 
-[tool.ruff.lint.per-file-ignores]
-"experiments/train_gpt2_owt.py" = ["E402"]
+# [tool.ruff.lint.per-file-ignores]
+# "eden/__main__.py" = ["E402"]
 
 # ---------------- mypy ----------------
 [tool.mypy]
