@@ -1,0 +1,19 @@
+{
+  "configurations": [
+    {
+      "name": "Linux",
+      "includePath": [
+        "/opt/cuda/include",
+        "${workspaceFolder}"
+      ],
+      "defines": [
+        "GOOGLE_CUDA"
+      ],
+      "compilerPath": "/opt/cuda/bin/nvcc",
+      "cStandard": "c17",
+      "cppStandard": "gnu++20",
+      "intelliSenseMode": "linux-gcc-x64"
+    }
+  ],
+  "version": 4
+}

@@ -101,3 +101,7 @@ evagpt = { path = ".", editable = true }
 [tool.pixi.dependencies]
 cuda-version = "13.0.*"
 pytorch-gpu = { version = ">=2.13.0,<3", build = "cuda130*" }
+jupyter = ">=1.1.1,<2"
+python-dotenv = ">=1.2.3,<2"
+pandas = ">=3.0.5,<4"
+pandarallel = ">=1.6.5,<2"

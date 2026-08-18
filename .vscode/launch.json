@@ -1,0 +1,44 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Python Debugger: Remote Attach",
+      "type": "debugpy",
+      "request": "attach",
+      "connect": {
+        "host": "localhost",
+        "port": "${input:portNumber}"
+      },
+      "justMyCode": false
+    },
+    {
+      "name": "Attach to Remote gdbserver",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/.pixi/envs/default/bin/python3",
+      "args": [],
+      "stopAtEntry": false,
+      "cwd": "${workspaceFolder}",
+      "environment": [],
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "miDebuggerPath": "/usr/bin/gdb",
+      "miDebuggerServerAddress": "localhost:${input:portNumber}",
+      "setupCommands": [
+        {
+          "description": "Enable pretty-printing for gdb",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        }
+      ]
+    }
+  ],
+  "inputs": [
+    {
+      "id": "portNumber",
+      "type": "promptString",
+      "description": "Enter the port number to attach to",
+      "default": "5678"
+    }
+  ]
+}
