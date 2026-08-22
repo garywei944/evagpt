@@ -1,15 +1,15 @@
 import logging
 import math
-from typing import Callable
+from collections.abc import Callable
 
 import attrs
 import equinox as eqx
 import jax
 import jax.numpy as jnp
 import jax.random as jrandom
-from jaxtyping import Float, Array, jaxtyped, Int, PRNGKeyArray
-from beartype import beartype as typechecker
 import optax
+from beartype import beartype as typechecker
+from jaxtyping import Array, Float, Int, PRNGKeyArray, jaxtyped
 
 logger = logging.getLogger(__name__)
 
@@ -40,9 +40,7 @@ class MLP(eqx.Module):
         std_init = jax.nn.initializers.truncated_normal(0.02)
         scaled_init = jax.nn.initializers.truncated_normal(0.02 / math.sqrt(2 * config.n_layers))
 
-        self.c_fc = eqx.nn.Linear(
-            config.n_embd, 4 * config.n_embd, use_bias=config.bias, key=key_fc
-        )
+        self.c_fc = eqx.nn.Linear(config.n_embd, 4 * config.n_embd, use_bias=config.bias, key=key_fc)
         # replace weight with standard initialization
         self.c_fc = eqx.tree_at(
             lambda m: m.weight,
@@ -55,9 +53,7 @@ class MLP(eqx.Module):
             jnp.zeros((4 * config.n_embd,), dtype=self.c_fc.weight.dtype),
         )
 
-        self.c_proj = eqx.nn.Linear(
-            4 * config.n_embd, config.n_embd, use_bias=config.bias, key=key_proj
-        )
+        self.c_proj = eqx.nn.Linear(4 * config.n_embd, config.n_embd, use_bias=config.bias, key=key_proj)
         # apply special scaled initialization, as in GPT-2 paper
         self.c_proj = eqx.tree_at(
             lambda m: m.weight,
@@ -97,9 +93,7 @@ class CausalSelfAttention(eqx.Module):
         scaled_init = jax.nn.initializers.truncated_normal(0.02 / math.sqrt(2 * config.n_layers))
 
         # QKV projection
-        self.c_attn = eqx.nn.Linear(
-            config.n_embd, 3 * config.n_embd, use_bias=config.bias, key=key_c_attn
-        )
+        self.c_attn = eqx.nn.Linear(config.n_embd, 3 * config.n_embd, use_bias=config.bias, key=key_c_attn)
         self.c_attn = eqx.tree_at(
             lambda m: m.weight,
             self.c_attn,
@@ -111,9 +105,7 @@ class CausalSelfAttention(eqx.Module):
             jnp.zeros((3 * config.n_embd,), dtype=self.c_attn.weight.dtype),
         )
 
-        self.c_proj = eqx.nn.Linear(
-            config.n_embd, config.n_embd, use_bias=config.bias, key=key_c_proj
-        )
+        self.c_proj = eqx.nn.Linear(config.n_embd, config.n_embd, use_bias=config.bias, key=key_c_proj)
         self.c_proj = eqx.tree_at(
             lambda m: m.weight,
             self.c_proj,

@@ -124,6 +124,7 @@
   "python.testing.pytestEnabled": true,
   "python.testing.unittestEnabled": false,
   "pylint.enabled": true,
-  "python-envs.defaultEnvManager": "ms-python.python:system",
-  "cSpell.words": []
+  "python-envs.defaultEnvManager": "renan-r-santos.pixi-code:pixi",
+  "cSpell.words": [],
+  "python-envs.defaultPackageManager": "renan-r-santos.pixi-code:pixi"
 }

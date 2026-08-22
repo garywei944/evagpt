@@ -1,8 +1,7 @@
+import lightning as L
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
-import lightning as L
 
 
 class LargeMLP(nn.Module):
