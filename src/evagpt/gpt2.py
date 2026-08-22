@@ -41,7 +41,14 @@ class CausalSelfAttengion(nn.Module):
 
         # attn is contiguous
         attn = torch.einsum("...ij,...kj->...ik", q, k) / hs**0.5
-        attn = torch.masked_fill(attn, self.bias == 0, -torch.inf)
+        attn = attn.masked_fill(self.bias == 0, -torch.inf)
 
         attn = F.softmax(attn, dim=-1)
         attn = self.attn_dropout(attn)
+
+        y = attn @ v  # (B, nh, T, hs)
+        y = y.transpose(1, 2).contiguous().view(B, T, C)
+
+        y = self.resid_dropout(self.c_proj(attn))
+
+        return y
