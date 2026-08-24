@@ -99,13 +99,15 @@ evagpt = { path = ".", editable = true }
 [tool.pixi.tasks]
 
 [tool.pixi.dependencies]
-cuda-version = "13.0.*"
-pytorch-gpu = { version = ">=2.13.0,<3", build = "cuda130*" }
-jupyter = ">=1.1.1,<2"
-python-dotenv = ">=1.2.3,<2"
-pandas = ">=3.0.5,<4"
-pandarallel = ">=1.6.5,<2"
-tiktoken = ">=0.14.0,<0.15"
-jaxtyping = ">=0.3.11,<0.4"
 attrs = ">=26.1.0,<27"
+cuda-version = "13.0.*"
+datasets = ">=5.0.1,<6"
+jaxtyping = ">=0.3.11,<0.4"
+jupyter = ">=1.1.1,<2"
+numpy = ">=2.5.2,<3"
+pandarallel = ">=1.6.5,<2"
+pandas = ">=3.0.5,<4"
+python-dotenv = ">=1.2.3,<2"
+pytorch-gpu = { version = ">=2.13.0,<3", build = "cuda130*" }
+tiktoken = ">=0.14.0,<0.15"
 transformers = ">=5.15.1,<6"
