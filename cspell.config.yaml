@@ -3,11 +3,12 @@ ignorePaths: []
 dictionaryDefinitions: []
 dictionaries: []
 words:
-  - swiglu
   - deepseek
   - embd
+  - jaxtyping
   - memmap
   - openwebtext
   - Skylion
+  - swiglu
 ignoreWords: []
 import: []
