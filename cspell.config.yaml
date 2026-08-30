@@ -5,10 +5,14 @@ dictionaries: []
 words:
   - deepseek
   - embd
+  - evagpt
   - jaxtyping
   - memmap
   - openwebtext
+  - resid
+  - silu
   - Skylion
   - swiglu
+  - tril
 ignoreWords: []
 import: []

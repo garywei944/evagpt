@@ -41,6 +41,8 @@ class CausalSelfAttention(nn.Module):
         B, T, C = x.shape
         nh, hs = self.config.n_heads, C // self.config.n_heads
 
+        # TODO: flash attention
+
         # QKV are not contiguous
         q, k, v = self.c_attn(x).chunk(3, dim=-1)
         q = q.view(B, T, nh, hs).transpose(1, 2)  # (B, nh, T, hs)

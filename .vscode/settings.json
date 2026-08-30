@@ -23,7 +23,6 @@
     "typeindex": "cpp",
     "typeinfo": "cpp"
   },
-  "python.analysis.extraPaths": [],
   "cmake.ignoreCMakeListsMissing": true,
   "clangd.arguments": [
     "-j=8",

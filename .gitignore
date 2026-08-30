@@ -227,3 +227,4 @@ __marimo__/
 /data/openwebtext/
 
 *.bin
+/lightning_logs/*
