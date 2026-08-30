@@ -36,7 +36,7 @@ jobs:
           CONDA_OVERRIDE_CUDA: "13.0"
 
       - name: Cache pre-commit
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.cache/pre-commit
           key: precommit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
