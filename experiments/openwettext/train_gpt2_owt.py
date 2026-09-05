@@ -69,7 +69,10 @@ def main():
 
     trainer = L.Trainer(
         max_steps=20000,
-        logger=[loggers.TensorBoardLogger("lightning_logs", name="gpt2_owt")],
+        logger=[
+            loggers.TensorBoardLogger("lightning_logs", name="gpt2_owt"),
+            loggers.WandbLogger(project="gpt2_owt", name="gpt2_owt", entity="garywei944"),
+        ],
         callbacks=[callbacks.LearningRateMonitor(logging_interval="step")],
         gradient_clip_val=1.0,
         precision="bf16-mixed",
