@@ -8,9 +8,9 @@ from torch.nn import functional as F
 @attrs.define(frozen=True)
 class GPT2Config:
     block_size: int = 1024
-    vocab_size: int = 50304
+    vocab_size: int = 32768
     n_layers: int = 12
-    n_heads: int = 12
+    n_heads: int = 6
     n_embd: int = 768
 
     ffn_bias: bool = False
@@ -65,7 +65,7 @@ class CausalSelfAttention(nn.Module):
         return y
 
 
-class SwiGLU(nn.Module):
+class MLP(nn.Module):
     def __init__(self, *, config: GPT2Config):
         super().__init__()
         self.config = config
@@ -96,13 +96,11 @@ class Block(nn.Module):
         self.config = config
 
         self.attn = CausalSelfAttention(config=config)
-        self.attn_norm = nn.RMSNorm([config.n_embd])
-        self.mlp = SwiGLU(config=config)
-        self.mlp_norm = nn.RMSNorm([config.n_embd])
+        self.mlp = MLP(config=config)
 
     def forward(self, x: Float[Tensor, "B T C"]) -> Float[Tensor, "B T C"]:
-        x = x + self.attn(self.attn_norm(x))
-        x = x + self.mlp(self.mlp_norm(x))
+        x = x + self.attn(rms_norm(x))
+        x = x + self.mlp(rms_norm(x))
 
         return x
 
@@ -116,7 +114,6 @@ class GPT2(nn.Module):
         self.wte = nn.Embedding(config.vocab_size, config.n_embd)
         self.wpe = nn.Embedding(config.block_size, config.n_embd)
         self.h = nn.ModuleList([Block(config=config) for _ in range(config.n_layers)])
-        self.norm_layer = nn.RMSNorm([config.n_embd])
 
         self.lm_head = nn.Linear(config.n_embd, config.vocab_size, bias=False)
         self.wte.weight = self.lm_head.weight
@@ -137,7 +134,7 @@ class GPT2(nn.Module):
 
         for block in self.h:
             x = block(x)
-        x = self.norm_layer(x)  # (B, T, C)
+        x = rms_norm(x)  # (B, T, C)
 
         logits = self.lm_head(x)  # (B, T, V)
 
@@ -147,3 +144,7 @@ class GPT2(nn.Module):
         loss = F.cross_entropy(logits.reshape(-1, self.config.vocab_size), targets.reshape(-1))
 
         return logits, loss
+
+
+def rms_norm(x: Float[Tensor, "... C"]) -> Float[Tensor, "... C"]:
+    return F.rms_norm(x, (x.size(-1),))
