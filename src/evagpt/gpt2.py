@@ -116,7 +116,7 @@ class GPT2(nn.Module):
         self.wte = nn.Embedding(config.vocab_size, config.n_embd)
         self.wpe = nn.Embedding(config.block_size, config.n_embd)
         self.h = nn.ModuleList([Block(config=config) for _ in range(config.n_layers)])
-        self.rms_norm = nn.RMSNorm([config.n_embd])
+        self.norm_layer = nn.RMSNorm([config.n_embd])
 
         self.lm_head = nn.Linear(config.n_embd, config.vocab_size, bias=False)
         self.wte.weight = self.lm_head.weight
@@ -137,7 +137,7 @@ class GPT2(nn.Module):
 
         for block in self.h:
             x = block(x)
-        x = self.rms_norm(x)  # (B, T, C)
+        x = self.norm_layer(x)  # (B, T, C)
 
         logits = self.lm_head(x)  # (B, T, V)
 

@@ -54,6 +54,8 @@ quote-style = "double"
 [tool.pyrefly]
 project-includes = ["src", "scripts", "tests"]
 python-version = "3.14"
+# Pin to the pixi env; otherwise Pyrefly walks up and picks ~/.venv.
+python-interpreter-path = ".pixi/envs/default/bin/python"
 
 # ---------------- Commitizen ----------------
 [tool.commitizen]
