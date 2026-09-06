@@ -2,6 +2,7 @@ import logging
 
 import lightning as L
 import tiktoken
+import torch
 from jaxtyping import Int64
 from lightning.pytorch import callbacks, loggers
 from torch import Tensor, optim
@@ -39,6 +40,7 @@ class GPT2Model(L.LightningModule):
             block_size=1024, vocab_size=tokenizer.n_vocab, n_layers=2, n_heads=2, n_embd=128
         )
         self.gpt = gpt2.GPT2(config=self.gpt_config)
+        self.gpt = torch.compile(self.gpt)
 
     def training_step(self, batch: tuple[Int64[Tensor, " T"], Int64[Tensor, " T"]], batch_idx: int):
         input_ids, labels = batch
